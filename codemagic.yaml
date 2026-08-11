@@ -1,0 +1,17 @@
+workflows:
+  android-build:
+    name: Imdad Android APK Build
+    max_build_duration: 30
+    instance_type: mac_mini_m1
+    environment:
+      flutter: stable
+    scripts:
+      - name: Get Flutter Packages
+        script: flutter pub get
+      - name: Generate Drift Database Code
+        script: |
+          flutter pub run build_runner build --delete-conflicting-outputs
+      - name: Build Android Release APK
+        script: flutter build apk --release
+    artifacts:
+      - build/app/outputs/flutter-apk/app-release.apk
