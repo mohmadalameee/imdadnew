@@ -1,0 +1,36 @@
+name: imdad
+description: تطبيق إمداد لإدارة اللوجستيات
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.6.0 <4.0.0'
+
+dependencies:
+  sqflite_common_ffi: ^2.3.4+1
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
+  get_it: ^8.1.0
+  go_router: ^14.6.2
+  sqflite: ^2.2.8
+  path_provider: ^2.1.5
+  path: ^1.9.1
+  shared_preferences: ^2.3.5
+  intl: ^0.20.2
+  fl_chart: ^0.70.0
+  logger: ^2.5.0
+  equatable: ^2.0.5
+  google_fonts: ^6.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
