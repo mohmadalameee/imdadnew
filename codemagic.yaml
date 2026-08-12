@@ -1,17 +1,34 @@
 workflows:
   android-build:
-    name: Imdad Android APK Build
-    max_build_duration: 30
+    name: IMDAD Android Release APK
+    max_build_duration: 45
     instance_type: mac_mini_m1
+
     environment:
       flutter: stable
+      java: 17
+
+    cache:
+      cache_paths:
+        - $HOME/.pub-cache
+        - $HOME/.gradle/caches
+
     scripts:
-      - name: Get Flutter Packages
+      - name: Clean Flutter build
+        script: flutter clean
+      - name: Get Flutter packages
         script: flutter pub get
-      - name: Generate Drift Database Code
+      - name: Generate Drift database code
+        script: dart run build_runner build
+      - name: Verify source and Android v2 embedding
         script: |
-          flutter pub run build_runner build --delete-conflicting-outputs
-      - name: Build Android Release APK
+          if grep -RInE 'io\.flutter\.(app|view|facade)\.|PluginRegistry\.Registrar|registrarFor\(|getFlutterView\(' android lib; then
+            echo 'Android v1 embedding reference found.'
+            exit 1
+          fi
+          flutter analyze
+      - name: Build Android release APK
         script: flutter build apk --release
+
     artifacts:
       - build/app/outputs/flutter-apk/app-release.apk
