@@ -21,6 +21,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           return StoreDetailsScreen(store: store);
         },
       ),
+      GoRoute(path: '/locations', builder: (context, state) => const LocationsManagementScreen()),
+      GoRoute(
+        path: '/location-details',
+        builder: (context, state) {
+          final location = state.extra as Location;
+          return LocationDetailsScreen(location: location);
+        },
+      ),
       GoRoute(path: '/employees', builder: (context, state) => const EmployeesManagementScreen()),
       GoRoute(path: '/assets', builder: (context, state) => const AssetsInventoryScreen()),
       GoRoute(path: '/movements', builder: (context, state) => const AssetMovementsScreen()),
@@ -30,7 +38,55 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   );
 });
 
-// --- Login Screen (تسجيل الدخول وصلاحيات الأدوار) ---
+// دوال مساعدة للتصنيفات والحالات الفنية
+String getCategoryName(String category) {
+  switch (category) {
+    case 'electronics': return 'أجهزة إلكترونية';
+    case 'weapons': return 'أسلحة وذخيرة';
+    case 'water_tanks': return 'خزانات مياه وشبكات صحية';
+    case 'kitchen': return 'أدوات مطبخ وتجهيزات إعاشة';
+    case 'furniture': return 'مفروشات وأثاث';
+    case 'military_gear': return 'مهام عسكرية';
+    default: return category;
+  }
+}
+
+Widget getAssetStatusBadge(String status) {
+  Color color;
+  String text;
+  switch (status) {
+    case 'ready':
+      color = Colors.green;
+      text = 'جاهز / يعمل';
+      break;
+    case 'damaged':
+      color = Colors.red;
+      text = 'تالف';
+      break;
+    case 'maintenance':
+      color = Colors.amber.shade800;
+      text = 'تحتاج صيانة';
+      break;
+    case 'missing':
+      color = Colors.grey;
+      text = 'مفقود';
+      break;
+    default:
+      color = Colors.blue;
+      text = status;
+  }
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: 0.15),
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: color),
+    ),
+    child: Text(text, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12)),
+  );
+}
+
+// --- Login Screen ---
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
   @override
@@ -90,7 +146,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     const SizedBox(height: 16),
                     const Text('نظام إمداد المؤسسي', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFF1A5F7A))),
                     const SizedBox(height: 8),
-                    const Text('الإدارة الحكومية واللوجستية المتكاملة', style: TextStyle(color: Colors.grey)),
+                    const Text('إدارة التموين والعهد واللوجستيات', style: TextStyle(color: Colors.grey)),
                     const SizedBox(height: 32),
                     TextField(
                       controller: _usernameController,
@@ -123,7 +179,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 }
 
-// --- Enterprise Dashboard (لوحة التحكم الاحترافية) ---
+// --- Enterprise Dashboard ---
 class ImdadEnterpriseDashboard extends ConsumerWidget {
   const ImdadEnterpriseDashboard({super.key});
 
@@ -155,12 +211,12 @@ class ImdadEnterpriseDashboard extends ConsumerWidget {
             crossAxisSpacing: 16,
             mainAxisSpacing: 16,
             children: [
-              _card(context, 'المخازن والمواقع', Icons.store, Colors.blue, '/stores'),
+              _card(context, 'المواقع والنقاط', Icons.location_on, Colors.teal, '/locations'),
+              _card(context, 'المخازن والمستودعات', Icons.store, Colors.blue, '/stores'),
               _card(context, 'سجل الموظفين', Icons.badge, Colors.green, '/employees'),
-              _card(context, 'الأصناف والعهد', Icons.security, Colors.orange, '/assets'),
+              _card(context, 'العهد والتصنيفات', Icons.security, Colors.orange, '/assets'),
               _card(context, 'حركات الصرف والنقل', Icons.swap_horiz, Colors.indigo, '/movements'),
               _card(context, 'التقارير الشاملة', Icons.analytics, Colors.purple, '/reports'),
-              _card(context, 'الإعدادات والنسخ', Icons.settings_applications, Colors.teal, '/settings'),
             ],
           ),
         ),
@@ -188,7 +244,166 @@ class ImdadEnterpriseDashboard extends ConsumerWidget {
   }
 }
 
-// 1. إدارة المخازن
+// 1. نظام المواقع والنقاط (Locations & Sites)
+class LocationsManagementScreen extends ConsumerWidget {
+  const LocationsManagementScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final db = ref.watch(databaseProvider);
+
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(title: const Text('إدارة المواقع والنقاط التابعة'), backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
+        body: StreamBuilder<List<Location>>(
+          stream: db.select(db.locations).watch(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+            final locations = snapshot.data!;
+            if (locations.isEmpty) {
+              return const Center(child: Text('لا توجد مواقع مسجلة. اضغط لإضافة موقع جديد.'));
+            }
+            return ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: locations.length,
+              itemBuilder: (context, index) {
+                final loc = locations[index];
+                return Card(
+                  child: ListTile(
+                    leading: const CircleAvatar(backgroundColor: Color(0xFF1A5F7A), child: Icon(Icons.location_on, color: Colors.white)),
+                    title: Text(loc.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text('المشرف: ${loc.supervisor} | الوصف: ${loc.description ?? 'لا يوجد'}'),
+                    onTap: () => context.push('/location-details', extra: loc),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      onPressed: () async {
+                        await (db.delete(db.locations)..where((t) => t.id.equals(loc.id))).go();
+                      },
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+        ),
+        floatingActionButton: FloatingActionButton(
+          backgroundColor: const Color(0xFF1A5F7A),
+          child: const Icon(Icons.add, color: Colors.white),
+          onPressed: () => _showAddLocationDialog(context, db),
+        ),
+      ),
+    );
+  }
+
+  void _showAddLocationDialog(BuildContext context, AppDatabase db) {
+    final nameController = TextEditingController();
+    final supervisorController = TextEditingController();
+    final descController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: const Text('إضافة موقع أو نقطة جديدة'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: nameController, decoration: const InputDecoration(labelText: 'اسم الموقع / النقطة')),
+              TextField(controller: supervisorController, decoration: const InputDecoration(labelText: 'المشرف المسؤول')),
+              TextField(controller: descController, decoration: const InputDecoration(labelText: 'الوصف أو الملاحظات')),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
+            ElevatedButton(
+              onPressed: () async {
+                if (nameController.text.isNotEmpty && supervisorController.text.isNotEmpty) {
+                  await db.into(db.locations).insert(LocationsCompanion.insert(
+                    name: nameController.text.trim(),
+                    supervisor: supervisorController.text.trim(),
+                    description: Value(descController.text.trim()),
+                  ));
+                  if (context.mounted) Navigator.pop(context);
+                }
+              },
+              child: const Text('حفظ'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// 1.1 لوحة تفاصيل الموقع وجرد الأصناف الحي
+class LocationDetailsScreen extends ConsumerWidget {
+  final Location location;
+  const LocationDetailsScreen({super.key, required this.location});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final db = ref.watch(databaseProvider);
+
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(title: Text('موقع: ${location.name}'), backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
+        body: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              color: const Color(0xFF1A5F7A).withValues(alpha: 0.1),
+              child: Row(
+                children: [
+                  const Icon(Icons.supervisor_account, color: Color(0xFF1A5F7A)),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text('المشرف المسؤول: ${location.supervisor}\nالوصف: ${location.description ?? 'لا يوجد'}'),
+                  ),
+                ],
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Text('جرد حي للأصناف المتواجدة في هذا الموقع:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            ),
+            Expanded(
+              child: StreamBuilder<List<Asset>>(
+                stream: (db.select(db.assets)..where((t) => t.locationId.equals(location.id))).watch(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+                  final assets = snapshot.data!;
+                  if (assets.isEmpty) {
+                    return const Center(child: Text('لا توجد أصناف مرتبطة بهذا الموقع حالياً.'));
+                  }
+                  return ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: assets.length,
+                    itemBuilder: (context, index) {
+                      final asset = assets[index];
+                      return Card(
+                        child: ListTile(
+                          leading: const Icon(Icons.security, color: Color(0xFF1A5F7A)),
+                          title: Text(asset.name),
+                          subtitle: Text('رقم القطعة: ${asset.serialNumber} | التصنيف: ${getCategoryName(asset.category)}'),
+                          trailing: getAssetStatusBadge(asset.assetStatus),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// 2. إدارة المخازن
 class StoresManagementScreen extends ConsumerWidget {
   const StoresManagementScreen({super.key});
 
@@ -199,14 +414,14 @@ class StoresManagementScreen extends ConsumerWidget {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        appBar: AppBar(title: const Text('إدارة المخازن والمواقع'), backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
+        appBar: AppBar(title: const Text('إدارة المخازن والمستودعات'), backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
         body: StreamBuilder<List<Store>>(
           stream: db.select(db.stores).watch(),
           builder: (context, snapshot) {
             if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
             final stores = snapshot.data!;
             if (stores.isEmpty) {
-              return const Center(child: Text('لا توجد مخازن مسجلة. أضف مخزناً أولاً.'));
+              return const Center(child: Text('لا توجد مخازن مسجلة.'));
             }
             return ListView.builder(
               padding: const EdgeInsets.all(16),
@@ -219,22 +434,6 @@ class StoresManagementScreen extends ConsumerWidget {
                     title: Text(store.name, style: const TextStyle(fontWeight: FontWeight.bold)),
                     subtitle: Text('الموقع: ${store.location}'),
                     onTap: () => context.push('/store-details', extra: store),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.add_box, color: Colors.blue),
-                          tooltip: 'إضافة صنف',
-                          onPressed: () => _showAddAssetToStoreDialog(context, db, store),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () async {
-                            await (db.delete(db.stores)..where((t) => t.id.equals(store.id))).go();
-                          },
-                        ),
-                      ],
-                    ),
                   ),
                 );
               },
@@ -274,7 +473,6 @@ class StoresManagementScreen extends ConsumerWidget {
                   await db.into(db.stores).insert(StoresCompanion.insert(
                     name: nameController.text.trim(),
                     location: locationController.text.trim(),
-                    type: const Value('main'),
                   ));
                   if (context.mounted) Navigator.pop(context);
                 }
@@ -286,62 +484,9 @@ class StoresManagementScreen extends ConsumerWidget {
       ),
     );
   }
-
-  void _showAddAssetToStoreDialog(BuildContext context, AppDatabase db, Store store) {
-    final serialController = TextEditingController();
-    final nameController = TextEditingController();
-    String category = 'weapon';
-
-    showDialog(
-      context: context,
-      builder: (context) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: AlertDialog(
-          title: Text('إدخال صنف في مخزن: ${store.name}'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(controller: serialController, decoration: const InputDecoration(labelText: 'رقم القطعة / الباركود')),
-                TextField(controller: nameController, decoration: const InputDecoration(labelText: 'اسم الصنف')),
-                DropdownButtonFormField<String>(
-                  value: category,
-                  items: const [
-                    DropdownMenuItem(value: 'weapon', child: Text('سلاح / ذخيرة')),
-                    DropdownMenuItem(value: 'vehicle', child: Text('مركبة')),
-                    DropdownMenuItem(value: 'comms', child: Text('جهاز اتصال')),
-                  ],
-                  onChanged: (val) => category = val ?? 'weapon',
-                  decoration: const InputDecoration(labelText: 'التصنيف'),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
-            ElevatedButton(
-              onPressed: () async {
-                if (serialController.text.isNotEmpty && nameController.text.isNotEmpty) {
-                  await db.into(db.assets).insert(AssetsCompanion.insert(
-                    serialNumber: serialController.text.trim(),
-                    name: nameController.text.trim(),
-                    category: category,
-                    storeId: Value(store.id),
-                    status: const Value('in_store'),
-                  ));
-                  if (context.mounted) Navigator.pop(context);
-                }
-              },
-              child: const Text('إدخال'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
-// 1.1 تفاصيل المخزن
+// 2.1 تفاصيل المخزن
 class StoreDetailsScreen extends ConsumerWidget {
   final Store store;
   const StoreDetailsScreen({super.key, required this.store});
@@ -353,14 +498,14 @@ class StoreDetailsScreen extends ConsumerWidget {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        appBar: AppBar(title: Text('محتويات مخزن: ${store.name}'), backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
+        appBar: AppBar(title: Text('مستودع: ${store.name}'), backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
         body: StreamBuilder<List<Asset>>(
           stream: (db.select(db.assets)..where((t) => t.storeId.equals(store.id))).watch(),
           builder: (context, snapshot) {
             if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
             final assets = snapshot.data!;
             if (assets.isEmpty) {
-              return const Center(child: Text('هذا المخزن فارغ حالياً.'));
+              return const Center(child: Text('المستودع فارغ.'));
             }
             return ListView.builder(
               padding: const EdgeInsets.all(16),
@@ -371,7 +516,8 @@ class StoreDetailsScreen extends ConsumerWidget {
                   child: ListTile(
                     leading: const Icon(Icons.security, color: Color(0xFF1A5F7A)),
                     title: Text(asset.name),
-                    subtitle: Text('رقم القطعة: ${asset.serialNumber} | الحالة: ${asset.status}'),
+                    subtitle: Text('رقم القطعة: ${asset.serialNumber} | التصنيف: ${getCategoryName(asset.category)}'),
+                    trailing: getAssetStatusBadge(asset.assetStatus),
                   ),
                 );
               },
@@ -383,7 +529,7 @@ class StoreDetailsScreen extends ConsumerWidget {
   }
 }
 
-// 2. سجل الموظفين
+// 3. سجل الموظفين
 class EmployeesManagementScreen extends ConsumerWidget {
   const EmployeesManagementScreen({super.key});
 
@@ -394,55 +540,22 @@ class EmployeesManagementScreen extends ConsumerWidget {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        appBar: AppBar(title: const Text('سجل الموظفين والعهد'), backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
+        appBar: AppBar(title: const Text('سجل الموظفين'), backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
         body: StreamBuilder<List<Employee>>(
           stream: db.select(db.employees).watch(),
           builder: (context, snapshot) {
             if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
             final employees = snapshot.data!;
-            if (employees.isEmpty) {
-              return const Center(child: Text('لا توجد سجلات موظفين.'));
-            }
             return ListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: employees.length,
               itemBuilder: (context, index) {
                 final emp = employees[index];
                 return Card(
-                  child: ExpansionTile(
+                  child: ListTile(
                     leading: const Icon(Icons.badge, color: Colors.green),
                     title: Text('${emp.rank} / ${emp.name}'),
                     subtitle: Text('الرقم العسكري: ${emp.militaryId} | القسم: ${emp.department}'),
-                    children: [
-                      FutureBuilder<List<Asset>>(
-                        future: (db.select(db.assets)..where((t) => t.employeeId.equals(emp.id))).get(),
-                        builder: (context, assetSnapshot) {
-                          if (!assetSnapshot.hasData) {
-                            return const Padding(padding: EdgeInsets.all(8.0), child: CircularProgressIndicator());
-                          }
-                          final empAssets = assetSnapshot.data!;
-                          if (empAssets.isEmpty) {
-                            return const Padding(
-                              padding: EdgeInsets.all(12.0),
-                              child: Text('لا توجد عهد مصروفة لهذا الموظف حالياً.', style: TextStyle(color: Colors.grey)),
-                            );
-                          }
-                          return ListView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: empAssets.length,
-                            itemBuilder: (context, aIndex) {
-                              final asset = empAssets[aIndex];
-                              return ListTile(
-                                leading: const Icon(Icons.security, size: 20, color: Colors.orange),
-                                title: Text(asset.name),
-                                subtitle: Text('رقم القطعة: ${asset.serialNumber} | الحالة: مصروفة'),
-                              );
-                            },
-                          );
-                        },
-                      ),
-                    ],
                   ),
                 );
               },
@@ -502,7 +615,7 @@ class EmployeesManagementScreen extends ConsumerWidget {
   }
 }
 
-// 3. الأصناف والعهد (مع ميزة البحث المتقدم وفحص حالة القطعة)
+// 4. العهد والتصنيفات والبحث المتقدم الثلاثي (موظف، قطعة، موقع)
 class AssetsInventoryScreen extends ConsumerStatefulWidget {
   const AssetsInventoryScreen({super.key});
 
@@ -513,7 +626,7 @@ class AssetsInventoryScreen extends ConsumerStatefulWidget {
 class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
   final _searchController = TextEditingController();
   String _searchQuery = '';
-  String _searchType = 'serial'; // 'serial' or 'employee'
+  String _searchType = 'serial'; // 'serial', 'employee', 'location'
 
   @override
   Widget build(BuildContext context) {
@@ -522,7 +635,7 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        appBar: AppBar(title: const Text('الأصناف والعهد والبحث المتقدم'), backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
+        appBar: AppBar(title: const Text('العهد والتصنيفات والبحث المتقدم'), backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
         body: Column(
           children: [
             Padding(
@@ -533,7 +646,7 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
                     children: [
                       Expanded(
                         child: RadioListTile<String>(
-                          title: const Text('بحث برقم القطعة'),
+                          title: const Text('برقم القطعة', style: TextStyle(fontSize: 12)),
                           value: 'serial',
                           groupValue: _searchType,
                           onChanged: (val) => setState(() => _searchType = val ?? 'serial'),
@@ -541,10 +654,18 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
                       ),
                       Expanded(
                         child: RadioListTile<String>(
-                          title: const Text('بحث باسم الموظف'),
+                          title: const Text('باسم الموظف', style: TextStyle(fontSize: 12)),
                           value: 'employee',
                           groupValue: _searchType,
                           onChanged: (val) => setState(() => _searchType = val ?? 'employee'),
+                        ),
+                      ),
+                      Expanded(
+                        child: RadioListTile<String>(
+                          title: const Text('باسم الموقع', style: TextStyle(fontSize: 12)),
+                          value: 'location',
+                          groupValue: _searchType,
+                          onChanged: (val) => setState(() => _searchType = val ?? 'location'),
                         ),
                       ),
                     ],
@@ -552,16 +673,13 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
                   TextField(
                     controller: _searchController,
                     decoration: InputDecoration(
-                      labelText: _searchType == 'serial' ? 'أدخل رقم القطعة / الباركود' : 'أدخل اسم الموظف',
+                      labelText: _searchType == 'serial'
+                          ? 'أدخل رقم القطعة / الباركود'
+                          : _searchType == 'employee'
+                              ? 'أدخل اسم الموظف'
+                              : 'أدخل اسم الموقع أو النقطة',
                       prefixIcon: const Icon(Icons.search),
                       border: const OutlineInputBorder(),
-                      suffixIcon: IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() => _searchQuery = '');
-                        },
-                      ),
                     ),
                     onChanged: (val) => setState(() => _searchQuery = val.trim()),
                   ),
@@ -571,7 +689,9 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
             Expanded(
               child: _searchType == 'serial'
                   ? _buildSerialSearchList(db, _searchQuery)
-                  : _buildEmployeeSearchList(db, _searchQuery),
+                  : _searchType == 'employee'
+                      ? _buildEmployeeSearchList(db, _searchQuery)
+                      : _buildLocationSearchList(db, _searchQuery),
             ),
           ],
         ),
@@ -594,7 +714,7 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
           assets = assets.where((a) => a.serialNumber.contains(query)).toList();
         }
         if (assets.isEmpty) {
-          return const Center(child: Text('لا توجد قطع مطابقة للبحث برقم القطعة.'));
+          return const Center(child: Text('لا توجد قطع مطابقة.'));
         }
         return ListView.builder(
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -608,60 +728,68 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
                   : Future.value(null),
               builder: (context, empSnapshot) {
                 final employee = empSnapshot.data;
-                return Card(
-                  elevation: 3,
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+                return FutureBuilder<Location?>(
+                  future: asset.locationId != null
+                      ? (db.select(db.locations)..where((t) => t.id.equals(asset.locationId!))).getSingleOrNull()
+                      : Future.value(null),
+                  builder: (context, locSnapshot) {
+                    final location = locSnapshot.data;
+                    return Card(
+                      elevation: 3,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(isAssigned ? Icons.person : Icons.store, color: isAssigned ? Colors.orange : Colors.green),
-                            const SizedBox(width: 8),
-                            Text('${asset.name} (${asset.category})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          ],
-                        ),
-                        const Divider(),
-                        Text('رقم القطعة: ${asset.serialNumber}'),
-                        Text('المواصفات: ${asset.specs ?? 'لا توجد مواصفات'}'),
-                        const SizedBox(height: 8),
-                        if (isAssigned && employee != null) ...[
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            color: Colors.orange.withValues(alpha: 0.1),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.between,
                               children: [
-                                const Text('حالة القطعة: مصروفة', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange)),
-                                Text('المستلم: ${employee.rank} / ${employee.name}'),
-                                Text('الرقم العسكري: ${employee.militaryId} | القسم: ${employee.department}'),
+                                Text('${asset.name} (${getCategoryName(asset.category)})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                getAssetStatusBadge(asset.assetStatus),
                               ],
                             ),
-                          ),
-                        ] else ...[
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            color: Colors.green.withValues(alpha: 0.1),
-                            child: const Text('حالة القطعة: متوفرة في المخازن', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
-                          ),
-                        ],
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
-                              icon: Icon(isAssigned ? Icons.keyboard_return : Icons.send),
-                              label: Text(isAssigned ? 'إرجاع للمخزن' : 'صرف لموظف'),
-                              onPressed: () => _showMovementDialog(context, db, asset),
+                            const Divider(),
+                            Text('رقم القطعة: ${asset.serialNumber}'),
+                            Text('المواصفات: ${asset.specs ?? 'لا توجد'}'),
+                            const SizedBox(height: 8),
+                            if (isAssigned && employee != null) ...[
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                color: Colors.orange.withValues(alpha: 0.1),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text('حالة الصرف: مصروفة لموظف', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange)),
+                                    Text('المستلم: ${employee.rank} / ${employee.name} (${employee.militaryId})'),
+                                    if (location != null) Text('الموقع الحالي: ${location.name}'),
+                                  ],
+                                ),
+                              ),
+                            ] else ...[
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                color: Colors.green.withValues(alpha: 0.1),
+                                child: const Text('متوفرة في المستودع الرئيسي / مخزن التموين', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+                              ),
+                            ],
+                            const SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
+                                  icon: Icon(isAssigned ? Icons.keyboard_return : Icons.send),
+                                  label: Text(isAssigned ? 'إرجاع للمستودع' : 'صرف لموظف'),
+                                  onPressed: () => _showMovementDialog(context, db, asset),
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                      ],
-                    ),
-                  ),
+                      ),
+                    );
+                  },
                 );
               },
             );
@@ -681,7 +809,7 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
           employees = employees.where((e) => e.name.contains(query) || e.militaryId.contains(query)).toList();
         }
         if (employees.isEmpty) {
-          return const Center(child: Text('لا يوجد موظفون مطابظون للبحث.'));
+          return const Center(child: Text('لا يوجد موظفون مطابقون.'));
         }
         return ListView.builder(
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -692,6 +820,80 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
               future: (db.select(db.assets)..where((t) => t.employeeId.equals(emp.id))).get(),
               builder: (context, assetSnapshot) {
                 final assets = assetSnapshot.data ?? [];
+                return FutureBuilder<Location?>(
+                  future: emp.locationId != null
+                      ? (db.select(db.locations)..where((t) => t.id.equals(emp.locationId!))).getSingleOrNull()
+                      : Future.value(null),
+                  builder: (context, locSnapshot) {
+                    final location = locSnapshot.data;
+                    return Card(
+                      elevation: 3,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('${emp.rank} / ${emp.name}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1A5F7A))),
+                            const Divider(),
+                            Text('الرقم العسكري: ${emp.militaryId} | القسم: ${emp.department}'),
+                            if (location != null) Text('الموقع الحالي: ${location.name}'),
+                            const SizedBox(height: 8),
+                            Text('العهد المصروفة (${assets.length}):', style: const TextStyle(fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 4),
+                            if (assets.isEmpty)
+                              const Text('لا توجد عهد مصروفة لهذا الموظف.', style: TextStyle(color: Colors.grey))
+                            else
+                              ...assets.map((a) => Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 4.0),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.between,
+                                      children: [
+                                        Expanded(child: Text('• ${a.name} (${getCategoryName(a.category)}) [رقم: ${a.serialNumber}]')),
+                                        getAssetStatusBadge(a.assetStatus),
+                                      ],
+                                    ),
+                                  )),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildLocationSearchList(AppDatabase db, String query) {
+    return StreamBuilder<List<Location>>(
+      stream: db.select(db.locations).watch(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+        var locations = snapshot.data!;
+        if (query.isNotEmpty) {
+          locations = locations.where((l) => l.name.contains(query) || l.supervisor.contains(query)).toList();
+        }
+        if (locations.isEmpty) {
+          return const Center(child: Text('لا توجد مواقع مطابقة.'));
+        }
+        return ListView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          itemCount: locations.length,
+          itemBuilder: (context, index) {
+            final loc = locations[index];
+            return FutureBuilder<List<Asset>>(
+              future: (db.select(db.assets)..where((t) => t.locationId.equals(loc.id) | t.storeId.isInQuery(db.select(db.stores).map((s) => s.id)))).get(),
+              builder: (context, assetSnapshot) {
+                final assets = assetSnapshot.data ?? [];
+                final readyCount = assets.where((a) => a.assetStatus == 'ready').length;
+                final damagedCount = assets.where((a) => a.assetStatus == 'damaged').length;
+                final maintCount = assets.where((a) => a.assetStatus == 'maintenance').length;
+                final missingCount = assets.where((a) => a.assetStatus == 'missing').length;
+
                 return Card(
                   elevation: 3,
                   margin: const EdgeInsets.only(bottom: 12),
@@ -700,24 +902,27 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        Text('تقرير جرد الموقع: ${loc.name}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1A5F7A))),
+                        const Divider(),
+                        Text('المشرف المسؤول: ${loc.supervisor}'),
+                        const SizedBox(height: 8),
                         Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
-                            const Icon(Icons.badge, color: Color(0xFF1A5F7A)),
-                            const SizedBox(width: 8),
-                            Text('${emp.rank} / ${emp.name}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            _statChip('جاهز', readyCount, Colors.green),
+                            _statChip('تالف', damagedCount, Colors.red),
+                            _statChip('صيانة', maintCount, Colors.amber.shade800),
+                            _statChip('مفقود', missingCount, Colors.grey),
                           ],
                         ),
-                        const Divider(),
-                        Text('الرقم العسكري: ${emp.militaryId} | القسم: ${emp.department}'),
                         const SizedBox(height: 8),
-                        Text('العهد المستلمة (${assets.length}):', style: const TextStyle(fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 4),
+                        Text('إجمالي الأصناف في الموقع (${assets.length}):', style: const TextStyle(fontWeight: FontWeight.bold)),
                         if (assets.isEmpty)
-                          const Text('لا توجد عهد مصروفة لهذا الموظف حالياً.', style: TextStyle(color: Colors.grey))
+                          const Text('لا توجد أصناف مسجلة في هذا الموقع.', style: TextStyle(color: Colors.grey))
                         else
                           ...assets.map((a) => Padding(
                                 padding: const EdgeInsets.symmetric(vertical: 2.0),
-                                child: Text('• ${a.name} (رقم القطعة: ${a.serialNumber}) - التصنيف: ${a.category}'),
+                                child: Text('• ${a.name} (${getCategoryName(a.category)}) - حالة: ${a.assetStatus}'),
                               )),
                       ],
                     ),
@@ -731,18 +936,37 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
     );
   }
 
+  Widget _statChip(String label, int count, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8), border: Border.all(color: color)),
+      child: Column(
+        children: [
+          Text('$count', style: TextStyle(fontWeight: FontWeight.bold, color: color, fontSize: 16)),
+          Text(label, style: TextStyle(color: color, fontSize: 12)),
+        ],
+      ),
+    );
+  }
+
   void _showAddAssetDialog(BuildContext context, AppDatabase db) async {
     final stores = await db.select(db.stores).get();
+    final locations = await db.select(db.locations).get();
+    
     if (stores.isEmpty) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أضف مخزناً أولاً.')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أضف مستودعاً أولاً.')));
       }
       return;
     }
 
     final serialController = TextEditingController();
     final nameController = TextEditingController();
+    final specsController = TextEditingController();
+    String category = 'weapons';
+    String assetStatus = 'ready';
     int? selectedStoreId = stores.first.id;
+    int? selectedLocationId = locations.isNotEmpty ? locations.first.id : null;
 
     if (!context.mounted) return;
 
@@ -751,30 +975,67 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
       builder: (context) => Directionality(
         textDirection: TextDirection.rtl,
         child: AlertDialog(
-          title: const Text('إضافة صنف جديد'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(controller: serialController, decoration: const InputDecoration(labelText: 'رقم القطعة / الباركود')),
-              TextField(controller: nameController, decoration: const InputDecoration(labelText: 'اسم الصنف')),
-              DropdownButtonFormField<int>(
-                value: selectedStoreId,
-                items: stores.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))).toList(),
-                onChanged: (v) => selectedStoreId = v,
-                decoration: const InputDecoration(labelText: 'المخزن'),
-              ),
-            ],
+          title: const Text('إضافة عهدة / صنف تمويني جديد'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(controller: serialController, decoration: const InputDecoration(labelText: 'رقم القطعة / الباركود')),
+                TextField(controller: nameController, decoration: const InputDecoration(labelText: 'اسم الصنف')),
+                DropdownButtonFormField<String>(
+                  value: category,
+                  items: const [
+                    DropdownMenuItem(value: 'electronics', child: Text('أجهزة إلكترونية')),
+                    DropdownMenuItem(value: 'weapons', child: Text('أسلحة وذخيرة')),
+                    DropdownMenuItem(value: 'water_tanks', child: Text('خزانات مياه وشبكات صحية')),
+                    DropdownMenuItem(value: 'kitchen', child: Text('أدوات مطبخ وتجهيزات إعاشة')),
+                    DropdownMenuItem(value: 'furniture', child: Text('مفروشات وأثاث')),
+                    DropdownMenuItem(value: 'military_gear', child: Text('مهام عسكرية')),
+                  ],
+                  onChanged: (val) => category = val ?? 'weapons',
+                  decoration: const InputDecoration(labelText: 'التصنيف الشامل'),
+                ),
+                DropdownButtonFormField<String>(
+                  value: assetStatus,
+                  items: const [
+                    DropdownMenuItem(value: 'ready', child: Text('جاهز / يعمل')),
+                    DropdownMenuItem(value: 'damaged', child: Text('تالف')),
+                    DropdownMenuItem(value: 'maintenance', child: Text('تحتاج صيانة')),
+                    DropdownMenuItem(value: 'missing', child: Text('مفقود')),
+                  ],
+                  onChanged: (val) => assetStatus = val ?? 'ready',
+                  decoration: const InputDecoration(labelText: 'الحالة الفنية'),
+                ),
+                DropdownButtonFormField<int>(
+                  value: selectedStoreId,
+                  items: stores.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))).toList(),
+                  onChanged: (val) => selectedStoreId = val,
+                  decoration: const InputDecoration(labelText: 'المستودع الرئيسي'),
+                ),
+                if (locations.isNotEmpty)
+                  DropdownButtonFormField<int>(
+                    value: selectedLocationId,
+                    items: locations.map((l) => DropdownMenuItem(value: l.id, child: Text(l.name))).toList(),
+                    onChanged: (val) => selectedLocationId = val,
+                    decoration: const InputDecoration(labelText: 'الموقع التابع له'),
+                  ),
+                TextField(controller: specsController, decoration: const InputDecoration(labelText: 'المواصفات الفنية')),
+              ],
+            ),
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
             ElevatedButton(
               onPressed: () async {
-                if (serialController.text.isNotEmpty && selectedStoreId != null) {
+                if (serialController.text.isNotEmpty && nameController.text.isNotEmpty && selectedStoreId != null) {
                   await db.into(db.assets).insert(AssetsCompanion.insert(
                     serialNumber: serialController.text.trim(),
                     name: nameController.text.trim(),
-                    category: 'weapon',
+                    category: category,
+                    assetStatus: Value(assetStatus),
                     storeId: Value(selectedStoreId),
+                    locationId: selectedLocationId != null ? Value(selectedLocationId) : const Value.absent(),
+                    specs: specsController.text.trim().isNotEmpty ? Value(specsController.text.trim()) : const Value.absent(),
                     status: const Value('in_store'),
                   ));
                   if (context.mounted) Navigator.pop(context);
@@ -790,6 +1051,8 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
 
   void _showMovementDialog(BuildContext context, AppDatabase db, Asset asset) async {
     final employees = await db.select(db.employees).get();
+    final locations = await db.select(db.locations).get();
+
     if (employees.isEmpty && asset.status != 'assigned') {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أضف موظفين أولاً.')));
@@ -798,6 +1061,7 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
     }
 
     int? selectedEmpId = employees.isNotEmpty ? employees.first.id : null;
+    int? selectedLocId = locations.isNotEmpty ? locations.first.id : null;
     final isAssigned = asset.status == 'assigned';
 
     if (!context.mounted) return;
@@ -807,18 +1071,26 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
       builder: (context) => Directionality(
         textDirection: TextDirection.rtl,
         child: AlertDialog(
-          title: Text(isAssigned ? 'إرجاع العهدة للمخزن' : 'صرف العهدة لموظف'),
+          title: Text(isAssigned ? 'إرجاع القطعة للمستودع' : 'صرف القطعة لموظف وموقع'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (!isAssigned)
+              if (!isAssigned) ...[
                 DropdownButtonFormField<int>(
                   value: selectedEmpId,
                   items: employees.map((e) => DropdownMenuItem(value: e.id, child: Text('${e.rank} / ${e.name}'))).toList(),
                   onChanged: (v) => selectedEmpId = v,
                   decoration: const InputDecoration(labelText: 'الموظف المستلم'),
                 ),
-              const Text('هل تريد تأكيد العملية؟'),
+                if (locations.isNotEmpty)
+                  DropdownButtonFormField<int>(
+                    value: selectedLocId,
+                    items: locations.map((l) => DropdownMenuItem(value: l.id, child: Text(l.name))).toList(),
+                    onChanged: (v) => selectedLocId = v,
+                    decoration: const InputDecoration(labelText: 'الموقع التابع'),
+                  ),
+              ],
+              const Text('تأكيد الحركة التموينية؟'),
             ],
           ),
           actions: [
@@ -832,7 +1104,11 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
                 } else {
                   if (selectedEmpId != null) {
                     await (db.update(db.assets)..where((t) => t.id.equals(asset.id))).write(
-                      AssetsCompanion(status: const Value('assigned'), employeeId: Value(selectedEmpId)),
+                      AssetsCompanion(
+                        status: const Value('assigned'),
+                        employeeId: Value(selectedEmpId),
+                        locationId: selectedLocId != null ? Value(selectedLocId) : const Value.absent(),
+                      ),
                     );
                   }
                 }
@@ -849,7 +1125,7 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
   }
 }
 
-// 4. حركات الصرف والنقل
+// 5. الحركات التاريخية
 class AssetMovementsScreen extends ConsumerWidget {
   const AssetMovementsScreen({super.key});
 
@@ -860,7 +1136,7 @@ class AssetMovementsScreen extends ConsumerWidget {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        appBar: AppBar(title: const Text('حركات الصرف والنقل'), backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
+        appBar: AppBar(title: const Text('حركات الصرف والنقل التمويني'), backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
         body: StreamBuilder<List<AssetMovement>>(
           stream: db.select(db.assetMovements).watch(),
           builder: (context, snapshot) {
@@ -874,7 +1150,7 @@ class AssetMovementsScreen extends ConsumerWidget {
                 return Card(
                   child: ListTile(
                     leading: const Icon(Icons.swap_horiz, color: Colors.indigo),
-                    title: Text('نوع الحركة: ${mov.movementType}'),
+                    title: Text('الحركة: ${mov.movementType}'),
                     subtitle: Text('التاريخ: ${mov.timestamp}'),
                   ),
                 );
@@ -887,7 +1163,7 @@ class AssetMovementsScreen extends ConsumerWidget {
   }
 }
 
-// 5. التقارير الشاملة
+// 6. التقارير الشاملة
 class EnterpriseReportsScreen extends StatelessWidget {
   const EnterpriseReportsScreen({super.key});
 
@@ -897,40 +1173,7 @@ class EnterpriseReportsScreen extends StatelessWidget {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(title: const Text('التقارير الشاملة'), backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
-        body: const Center(child: Text('وحدة التقارير نشطة وجاهزة للتصدير.')),
-      ),
-    );
-  }
-}
-
-// 6. الإعدادات والنسخ
-class SettingsScreen extends ConsumerWidget {
-  const SettingsScreen({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final currentUser = ref.watch(currentUserProvider);
-
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        appBar: AppBar(title: const Text('الإعدادات والنسخ'), backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
-        body: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            ListTile(
-              leading: const Icon(Icons.person),
-              title: const Text('المستخدم'),
-              subtitle: Text(currentUser?.fullName ?? 'مدير'),
-            ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.backup, color: Colors.blue),
-              title: const Text('نسخة احتياطية'),
-              onTap: () {},
-            ),
-          ],
-        ),
+        body: const Center(child: Text('وحدة تقارير التموين والعهد نشطة.')),
       ),
     );
   }
