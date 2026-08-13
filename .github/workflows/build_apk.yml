@@ -31,14 +31,17 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Generate Code (Drift & Riverpod)
+        run: dart run build_runner build --delete-conflicting-outputs
+
       - name: Run Flutter analyze
         run: flutter analyze
 
       - name: Build APK (Release)
-        run: flutter build apk --release
+        run: flutter build apk --release --no-tree-shake-icons
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: release-apk
+          name: imdad-release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
