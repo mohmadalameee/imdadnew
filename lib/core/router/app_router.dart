@@ -749,7 +749,7 @@ class EmployeesManagementScreen extends ConsumerWidget {
   }
 }
 
-// 4. العهد والتصنيفات والبحث المتقدم الشامل (موظف وجميع عهده، قطعة، موقع)
+// 4. العهد والتصنيفات والبحث المتقدم الشامل عن الموظف وجميع عهده
 class AssetsInventoryScreen extends ConsumerStatefulWidget {
   const AssetsInventoryScreen({super.key});
 
@@ -808,7 +808,7 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
                     controller: _searchController,
                     decoration: InputDecoration(
                       labelText: _searchType == 'employee'
-                          ? 'أدخل اسم الموظف أو رقمه العسكري للبحث عن كافة عهده'
+                          ? 'أدخل اسم الموظف للبحث عنه وعرض كافة عهده'
                           : _searchType == 'serial'
                               ? 'أدخل رقم القطعة / الباركود'
                               : 'أدخل اسم الموقع أو النقطة',
@@ -900,7 +900,7 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.between,
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
                                         Expanded(
                                           child: Column(
@@ -968,7 +968,7 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.between,
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text('${asset.name} (${getCategoryName(asset.category)})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                                 getAssetStatusBadge(asset.assetStatus),
