@@ -26,7 +26,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 // --- Login Screen (تسجيل الدخول وصلاحيات الأدوار) ---
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
-  @define
   @override
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
