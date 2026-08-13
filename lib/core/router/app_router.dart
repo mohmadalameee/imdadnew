@@ -4,52 +4,113 @@ import 'package:go_router/go_router.dart';
 import '../../shared/database/app_database.dart';
 import 'package:drift/drift.dart' as drift;
 
+// موفر لحفظ المستخدم الحالي الجلوس (Session State)
+final currentUserProvider = StateProvider<User?>((ref) => null);
+
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/',
     routes: [
-      GoRoute(path: '/', builder: (context, state) => const SplashScreen()),
-      GoRoute(path: '/home', builder: (context, state) => const ImdadDashboardScreen()),
-      GoRoute(path: '/stores', builder: (context, state) => const StoresScreen()),
-      GoRoute(path: '/employees', builder: (context, state) => const EmployeesScreen()),
-      GoRoute(path: '/search_asset', builder: (context, state) => const AssetSearchScreen()),
-      GoRoute(path: '/reports', builder: (context, state) => const ReportsScreen()),
+      GoRoute(path: '/', builder: (context, state) => const LoginScreen()),
+      GoRoute(path: '/home', builder: (context, state) => const ImdadEnterpriseDashboard()),
+      GoRoute(path: '/stores', builder: (context, state) => const StoresManagementScreen()),
+      GoRoute(path: '/employees', builder: (context, state) => const EmployeesManagementScreen()),
+      GoRoute(path: '/assets', builder: (context, state) => const AssetsInventoryScreen()),
+      GoRoute(path: '/movements', builder: (context, state) => const AssetMovementsScreen()),
+      GoRoute(path: '/reports', builder: (context, state) => const EnterpriseReportsScreen()),
       GoRoute(path: '/settings', builder: (context, state) => const SettingsScreen()),
     ],
   );
 });
 
-// --- Splash Screen ---
-class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
+// --- Login Screen (تسجيل الدخول وصلاحيات الأدوار) ---
+class LoginScreen extends ConsumerStatefulWidget {
+  const LoginScreen({super.key});
+  @define
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
-  @override
-  void initState() {
-    super.initState();
-    Future.delayed(const Duration(seconds: 3), () {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
+  final _usernameController = TextEditingController(text: 'admin');
+  final _passwordController = TextEditingController(text: 'admin123');
+
+  void _login() async {
+    final db = ref.read(databaseProvider);
+    final username = _usernameController.text.trim();
+    final password = _passwordController.text.trim();
+
+    // التحقق أو إنشاء حساب افتراضي للمدير
+    var user = await (db.select(db.users)..where((t) => t.username.equals(username))).getSingleOrNull();
+    if (user == null && username == 'admin') {
+      await db.into(db.users).insert(UsersCompanion.insert(
+        username: 'admin',
+        fullName: 'مدير النظام العام',
+        role: 'admin',
+        passwordHash: 'admin123',
+      ));
+      user = await (db.select(db.users)..where((t) => t.username.equals('admin'))).getSingleOrNull();
+    }
+
+    if (user != null && user.passwordHash == password) {
+      ref.read(currentUserProvider.notifier).state = user;
       if (mounted) context.go('/home');
-    });
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('خطأ في اسم المستخدم أو كلمة المرور')),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return const Directionality(
+    return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
+        backgroundColor: const Color(0xFF0F3E52),
         body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.inventory_2_outlined, size: 100, color: Color(0xFF1A5F7A)),
-              SizedBox(height: 24),
-              Text('إمداد', style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Color(0xFF1A5F7A))),
-              SizedBox(height: 16),
-              CircularProgressIndicator(color: Color(0xFF1A5F7A)),
-            ],
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
+            child: Card(
+              elevation: 8,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              child: Padding(
+                padding: const EdgeInsets.all(32.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.shield_outlined, size: 80, color: Color(0xFF1A5F7A)),
+                    const SizedBox(height: 16),
+                    const Text('نظام إمداد المؤسسي', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFF1A5F7A))),
+                    const SizedBox(height: 8),
+                    const Text('الإدارة الحكومية واللوجستية المتكاملة', style: TextStyle(color: Colors.grey)),
+                    const SizedBox(height: 32),
+                    TextField(
+                      controller: _usernameController,
+                      decoration: const InputDecoration(labelText: 'اسم المستخدم', prefixIcon: Icon(Icons.person)),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _passwordController,
+                      obscureText: true,
+                      decoration: const InputDecoration(labelText: 'كلمة المرور', prefixIcon: Icon(Icons.lock)),
+                    ),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: _login,
+                        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
+                        child: const Text('تسجيل الدخول', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
       ),
@@ -57,20 +118,30 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 }
 
-// --- Dashboard Screen ---
-class ImdadDashboardScreen extends StatelessWidget {
-  const ImdadDashboardScreen({super.key});
+// --- Enterprise Dashboard (لوحة التحكم الاحترافية) ---
+class ImdadEnterpriseDashboard extends ConsumerWidget {
+  const ImdadEnterpriseDashboard({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentUser = ref.watch(currentUserProvider);
+
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('نظام إمداد اللوجستي'),
-          centerTitle: true,
+          title: Text('لوحة التحكم - ${currentUser?.fullName ?? 'مدير النظام'}'),
           backgroundColor: const Color(0xFF1A5F7A),
           foregroundColor: Colors.white,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.logout),
+              onPressed: () {
+                ref.read(currentUserProvider.notifier).state = null;
+                context.go('/');
+              },
+            ),
+          ],
         ),
         body: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -79,10 +150,12 @@ class ImdadDashboardScreen extends StatelessWidget {
             crossAxisSpacing: 16,
             mainAxisSpacing: 16,
             children: [
-              _buildStatCard(context, 'المخازن والعهد', Icons.account_balance, Colors.blue, '/stores'),
-              _buildStatCard(context, 'سجل الموظفين', Icons.badge, Colors.green, '/employees'),
-              _buildStatCard(context, 'بحث برقم القطعة', Icons.manage_search, Colors.orange, '/search_asset'),
-              _buildStatCard(context, 'التقارير', Icons.insights, Colors.purple, '/reports'),
+              _card(context, 'المخازن والمواقع', Icons.store, Colors.blue, '/stores'),
+              _card(context, 'سجل الموظفين', Icons.badge, Colors.green, '/employees'),
+              _card(context, 'العهد والأصول والأسلحة', Icons.security, Colors.orange, '/assets'),
+              _card(context, 'حركات الصرف والنقل', Icons.swap_horiz, Colors.indigo, '/movements'),
+              _card(context, 'التقارير الشاملة', Icons.analytics, Colors.purple, '/reports'),
+              _card(context, 'الإعدادات والنسخ', Icons.settings_applications, Colors.teal, '/settings'),
             ],
           ),
         ),
@@ -90,18 +163,19 @@ class ImdadDashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStatCard(BuildContext context, String title, IconData icon, Color color, String route) {
+  Widget _card(BuildContext context, String title, IconData icon, Color color, String route) {
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         onTap: () => context.push(route),
+        borderRadius: BorderRadius.circular(16),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(icon, size: 48, color: color),
             const SizedBox(height: 12),
-            Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ],
         ),
       ),
@@ -109,284 +183,39 @@ class ImdadDashboardScreen extends StatelessWidget {
   }
 }
 
-// --- Asset Search Screen (البحث برقم القطعة) ---
-class AssetSearchScreen extends ConsumerStatefulWidget {
-  const AssetSearchScreen({super.key});
+// --- Placeholder Screens for Modules ---
+class StoresManagementScreen extends StatelessWidget {
+  const StoresManagementScreen({super.key});
   @override
-  ConsumerState<AssetSearchScreen> createState() => _AssetSearchScreenState();
+  Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('إدارة المخازن الرئيسية والفرعية')), body: const Center(child: Text('وحدة المخازن والمواقع الجغرافية نشطة')));
 }
 
-class _AssetSearchScreenState extends ConsumerState<AssetSearchScreen> {
-  final _searchController = TextEditingController();
-  Asset? _foundAsset;
-  Employee? _holder;
-  Store? _store;
-  bool _searched = false;
-
-  void _performSearch() async {
-    final db = ref.read(databaseProvider);
-    final serial = _searchController.text.trim();
-    if (serial.isEmpty) return;
-
-    final asset = await (db.select(db.assets)..where((t) => t.serialNumber.equals(serial))).getSingleOrNull();
-    
-    Employee? holder;
-    Store? store;
-    
-    if (asset != null) {
-      if (asset.employeeId != null) {
-        holder = await (db.select(db.employees)..where((t) => t.id.equals(asset.employeeId!))).getSingleOrNull();
-      }
-      if (asset.storeId != null) {
-        store = await (db.select(db.stores)..where((t) => t.id.equals(asset.storeId!))).getSingleOrNull();
-      }
-    }
-
-    setState(() {
-      _foundAsset = asset;
-      _holder = holder;
-      _store = store;
-      _searched = true;
-    });
-  }
-
+class EmployeesManagementScreen extends StatelessWidget {
+  const EmployeesManagementScreen({super.key});
   @override
-  Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        appBar: AppBar(title: const Text('بحث برقم القطعة'), backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
-        body: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  labelText: 'أدخل رقم القطعة (السلاح/العهدة)',
-                  suffixIcon: IconButton(icon: const Icon(Icons.search), onPressed: _performSearch),
-                  border: const OutlineInputBorder(),
-                ),
-                onSubmitted: (_) => _performSearch(),
-              ),
-              const SizedBox(height: 24),
-              if (_searched) 
-                _foundAsset == null 
-                  ? const Text('عذراً، لم يتم العثور على أي قطعة بهذا الرقم.')
-                  : Card(
-                      color: Colors.blueGrey[50],
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('تفاصيل القطعة: ${_foundAsset!.type}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                            const Divider(),
-                            Text('رقم التسلسل: ${_foundAsset!.serialNumber}'),
-                            const SizedBox(height: 8),
-                            if (_foundAsset!.status == 'assigned' && _holder != null) ...[
-                              const Text('الحالة: مصروفة (عُهدة)', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-                              Text('المستلم: ${_holder!.name}'),
-                              Text('تاريخ الصرف: ${_foundAsset!.assignedAt?.toString().split(' ')[0] ?? 'غير محدد'}'),
-                            ] else ...[
-                              const Text('الحالة: موجودة في المخزن', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-                              Text('الموقع: ${_store?.name ?? 'غير محدد'}'),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('إدارة الموظفين والكوادر')), body: const Center(child: Text('وحدة الموظفين نشطة')));
 }
 
-// --- Employees Screen (مع ميزة عرض العهد) ---
-class EmployeesScreen extends ConsumerWidget {
-  const EmployeesScreen({super.key});
-
+class AssetsInventoryScreen extends StatelessWidget {
+  const AssetsInventoryScreen({super.key});
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final db = ref.watch(databaseProvider);
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        appBar: AppBar(title: const Text('سجل الموظفين والعهد'), backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
-        body: StreamBuilder<List<Employee>>(
-          stream: db.select(db.employees).watch(),
-          builder: (context, snapshot) {
-            if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-            final list = snapshot.data!;
-            return ListView.builder(
-              itemCount: list.length,
-              itemBuilder: (context, index) {
-                final emp = list[index];
-                return ListTile(
-                  leading: const CircleAvatar(child: Icon(Icons.person)),
-                  title: Text(emp.name),
-                  subtitle: const Text('اضغط لعرض العُهد المستلمة'),
-                  onTap: () => _showAssets(context, db, emp),
-                );
-              },
-            );
-          },
-        ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () => _addEmployee(context, db),
-          child: const Icon(Icons.person_add),
-        ),
-      ),
-    );
-  }
-
-  void _showAssets(BuildContext context, AppDatabase db, Employee emp) async {
-    final assets = await (db.select(db.assets)..where((t) => t.employeeId.equals(emp.id))).get();
-    if (!context.mounted) return;
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('عُهد الموظف: ${emp.name}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const Divider(),
-              if (assets.isEmpty) const Text('لا توجد عُهد مسجلة لهذا الموظف.'),
-              ...assets.map((a) => ListTile(
-                title: Text(a.type),
-                subtitle: Text('رقم: ${a.serialNumber}'),
-                leading: const Icon(Icons.security),
-              )),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _addEmployee(BuildContext context, AppDatabase db) {
-    final controller = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('إضافة موظف جديد'),
-        content: TextField(controller: controller, decoration: const InputDecoration(hintText: 'اسم الموظف')),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
-          TextButton(onPressed: () {
-            if (controller.text.isNotEmpty) {
-              db.into(db.employees).insert(EmployeesCompanion.insert(name: controller.text));
-              Navigator.pop(context);
-            }
-          }, child: const Text('إضافة')),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('إدارة الأسلحة والعهد والمركبات')), body: const Center(child: Text('وحدة الأصول التخصصية نشطة')));
 }
 
-// --- Stores Screen ---
-class StoresScreen extends ConsumerWidget {
-  const StoresScreen({super.key});
+class AssetMovementsScreen extends StatelessWidget {
+  const AssetMovementsScreen({super.key});
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final db = ref.watch(databaseProvider);
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        appBar: AppBar(title: const Text('المخازن والعهد'), backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
-        body: StreamBuilder<List<Store>>(
-          stream: db.select(db.stores).watch(),
-          builder: (context, snapshot) {
-            if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-            return ListView.builder(
-              itemCount: snapshot.data!.length,
-              itemBuilder: (context, index) {
-                final store = snapshot.data![index];
-                return ListTile(
-                  title: Text(store.name),
-                  trailing: const Icon(Icons.chevron_left),
-                  onTap: () => _addAssetToStore(context, db, store),
-                );
-              },
-            );
-          },
-        ),
-        floatingActionButton: FloatingActionButton(onPressed: () => _addStore(context, db), child: const Icon(Icons.add_business)),
-      ),
-    );
-  }
-
-  void _addStore(BuildContext context, AppDatabase db) {
-    final controller = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('إضافة مخزن جديد'),
-        content: TextField(controller: controller, decoration: const InputDecoration(hintText: 'اسم المخزن')),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
-          TextButton(onPressed: () {
-            if (controller.text.isNotEmpty) {
-              db.into(db.stores).insert(StoresCompanion.insert(name: controller.text));
-              Navigator.pop(context);
-            }
-          }, child: const Text('إضافة')),
-        ],
-      ),
-    );
-  }
-
-  void _addAssetToStore(BuildContext context, AppDatabase db, Store store) {
-    final serialController = TextEditingController();
-    final typeController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('إضافة عُهدة لمخزن ${store.name}'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: typeController, decoration: const InputDecoration(hintText: 'نوع العُهدة (مثلاً: كلاشينكوف)')),
-            TextField(controller: serialController, decoration: const InputDecoration(hintText: 'رقم القطعة')),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
-          TextButton(onPressed: () {
-            if (serialController.text.isNotEmpty) {
-              db.into(db.assets).insert(AssetsCompanion.insert(
-                serialNumber: serialController.text,
-                type: typeController.text,
-                storeId: drift.Value(store.id),
-                status: const drift.Value('in_store'),
-              ));
-              Navigator.pop(context);
-            }
-          }, child: const Text('إضافة')),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('سجل حركات الصرف والإرجاع والتسوية')), body: const Center(child: Text('وحدة الحركات اللوجستية نشطة')));
 }
 
-// --- Reports & Settings ---
-class ReportsScreen extends StatelessWidget {
-  const ReportsScreen({super.key});
+class EnterpriseReportsScreen extends StatelessWidget {
+  const EnterpriseReportsScreen({super.key});
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(appBar: AppBar(title: const Text('التقارير')), body: const Center(child: Text('جاري تحليل البيانات...')));
-  }
+  Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('التقارير الحكومية المؤسسية')), body: const Center(child: Text('وحدة التقارير نشطة')));
 }
+
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(appBar: AppBar(title: const Text('الإعدادات')), body: const Center(child: Text('الإعدادات')));
-  }
+  Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('الإعدادات والنسخ الاحتياطي')), body: const Center(child: Text('وحدة الإعدادات نشطة')));
 }

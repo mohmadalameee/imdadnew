@@ -8,51 +8,82 @@ import 'package:path_provider/path_provider.dart';
 
 part 'app_database.g.dart';
 
+// 1. جدول المستخدمين والصلاحيات (RBAC)
+class Users extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get username => text().unique()();
+  TextColumn get fullName => text()();
+  TextColumn get role => text()(); // admin, supply_manager, storekeeper, custodian, vehicle_officer, weapon_officer, readonly
+  TextColumn get passwordHash => text()();
+}
+
+// 2. جدول الموظفين
 class Employees extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get name => text()();
-  TextColumn get rank => text().nullable()(); // الرتبة أو المسمى الوظيفي
+  TextColumn get militaryId => text().unique()(); // الرقم العسكري / الوظيفي
+  TextColumn get rank => text()(); // الرتبة
+  TextColumn get department => text()(); // الإدارة / القسم
+  TextColumn get status => text().withDefault(const Constant('active0'))(); // active, suspended, retired
 }
 
+// 3. جدول المخازن
 class Stores extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get name => text()();
-  TextColumn get location => text().nullable()();
+  TextColumn get type => text().withDefault(const Constant('main'))(); // main, sub
+  TextColumn get location => text()();
 }
 
-// جدول الأسلحة والعهد
+// 4. جدول العهد والأصول العامة والأسلحة والاتصالات
 class Assets extends Table {
   IntColumn get id => integer().autoIncrement()();
-  TextColumn get serialNumber => text().withLength(min: 1, max: 50)(); // رقم القطعة
-  TextColumn get type => text()(); // نوع السلاح أو العهدة
-  TextColumn get status => text().withDefault(const Constant('in_store'))(); // in_store أو assigned
-  IntColumn get storeId => integer().references(Stores, #id).nullable()(); // المخزن المتواجدة فيه
-  IntColumn get employeeId => integer().references(Employees, #id).nullable()(); // الموظف المستلم
-  DateTimeColumn get assignedAt => dateTime().nullable()(); // تاريخ الصرف
+  TextColumn get serialNumber => text().unique()(); // رقم القطعة / التسلسلي / الباركود
+  TextColumn get category => text()(); // weapon, vehicle, comms, equipment, ammo
+  TextColumn get name => text()(); // نوع السلاح أو اسم الجهاز
+  TextColumn get status => text().withDefault(const Constant('in_store'))(); // in_store, assigned, maintenance, disposed
+  IntColumn get storeId => integer().references(Stores, #id).nullable()();
+  IntColumn get employeeId => integer().references(Employees, #id).nullable()();
+  DateTimeColumn get receivedDate => dateTime().nullable()();
+  TextColumn get specs => text().nullable()(); // مواصفات إضافية (مثل المحرك، الهيكل، التشغيلة)
 }
 
-class Audits extends Table {
+// 5. جدول حركة العهد والأصول (Audit & Movement History)
+class AssetMovements extends Table {
   IntColumn get id => integer().autoIncrement()();
-  TextColumn get action => text()();
-  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  IntColumn get assetId => integer().references(Assets, #id)();
+  IntColumn get fromEmployeeId => integer().references(Employees, #id).nullable()();
+  IntColumn get toEmployeeId => integer().references(Employees, #id).nullable()();
+  TextColumn get movementType => text()(); // issue, return, transfer, disposal, maintenance
+  DateTimeColumn get timestamp => dateTime().withDefault(currentDateAndTime)();
+  TextColumn get notes => text().nullable()();
+  TextColumn get signatureRef => text().nullable()(); // مرجع التوقيع الإلكتروني
 }
 
-@DriftDatabase(tables: [Employees, Stores, Assets, Audits])
+// 6. جدول سجل العمليات العام (Audit Logs)
+class AuditLogs extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get username => text()();
+  TextColumn get action => text()();
+  DateTimeColumn get timestamp => dateTime().withDefault(currentDateAndTime)();
+  TextColumn get details => text()();
+}
+
+@DriftDatabase(tables: [Users, Employees, Stores, Assets, AssetMovements, AuditLogs])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 2; // ترقية النسخة لدعم الجداول الجديدة
+  int get schemaVersion => 3; // ترقية النسخة للنسخة المؤسסية
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) => m.createAll(),
     onUpgrade: (m, from, to) async {
-      if (from < 2) {
-        // إصلاح: استخدام مراجع الجداول الصحيحة المولدة
-        await m.createTable(assets);
-        await m.addColumn(employees, employees.rank);
-        await m.addColumn(stores, stores.location);
+      if (from < 3) {
+        await m.createTable(users);
+        await m.createTable(assetMovements);
+        await m.createTable(auditLogs);
       }
     },
   );
@@ -61,7 +92,7 @@ class AppDatabase extends _$AppDatabase {
 LazyDatabase _openConnection() {
   return LazyDatabase(() async {
     final directory = await getApplicationDocumentsDirectory();
-    final file = File(path.join(directory.path, 'imdad.db'));
+    final file = File(path.join(directory.path, 'imdad_enterprise.db'));
     return NativeDatabase.createInBackground(file);
   });
 }
