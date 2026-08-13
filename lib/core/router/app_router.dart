@@ -14,6 +14,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/', builder: (context, state) => const LoginScreen()),
       GoRoute(path: '/home', builder: (context, state) => const ImdadEnterpriseDashboard()),
       GoRoute(path: '/stores', builder: (context, state) => const StoresManagementScreen()),
+      GoRoute(
+        path: '/store-details',
+        builder: (context, state) {
+          final store = state.extra as Store;
+          return StoreDetailsScreen(store: store);
+        },
+      ),
       GoRoute(path: '/employees', builder: (context, state) => const EmployeesManagementScreen()),
       GoRoute(path: '/assets', builder: (context, state) => const AssetsInventoryScreen()),
       GoRoute(path: '/movements', builder: (context, state) => const AssetMovementsScreen()),
@@ -181,7 +188,7 @@ class ImdadEnterpriseDashboard extends ConsumerWidget {
   }
 }
 
-// 1. إدارة المخازن
+// 1. إدارة المخازن (مع إمكانية النقر لعرض جرد المخزن)
 class StoresManagementScreen extends ConsumerWidget {
   const StoresManagementScreen({super.key});
 
@@ -212,7 +219,9 @@ class StoresManagementScreen extends ConsumerWidget {
                   child: ListTile(
                     leading: const CircleAvatar(backgroundColor: Color(0xFF1A5F7A), child: Icon(Icons.store, color: Colors.white)),
                     title: Text(store.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text('النوع: ${store.type} | الموقع: ${store.location}'),
+                    subtitle: Text('النوع: ${store.type} | الموقع: ${store.location}\nانقر لعرض الأصناف وجرد المخزن'),
+                    isThreeLine: true,
+                    onTap: () => context.push('/store-details', extra: store),
                     trailing: IconButton(
                       icon: const Icon(Icons.delete, color: Colors.red),
                       onPressed: () async {
@@ -261,6 +270,142 @@ class StoresManagementScreen extends ConsumerWidget {
                     name: nameController.text.trim(),
                     location: locationController.text.trim(),
                     type: Value(type),
+                  ));
+                  if (context.mounted) Navigator.pop(context);
+                }
+              },
+              child: const Text('حفظ'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// 1.1 شاشة تفاصيل المخزن وإدخال الأصناف بداخله مباشرة
+class StoreDetailsScreen extends ConsumerWidget {
+  final Store store;
+  const StoreDetailsScreen({super.key, required this.store});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final db = ref.watch(databaseProvider);
+
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('مخزن: ${store.name}'),
+          backgroundColor: const Color(0xFF1A5F7A),
+          foregroundColor: Colors.white,
+        ),
+        body: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              color: const Color(0xFF1A5F7A).withValues(alpha: 0.1),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline, color: Color(0xFF1A5F7A)),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text('الموقع: ${store.location} | النوع: ${store.type}\nيمكنك إضافة الأصناف والعهد مباشرة لهذا المخزن عبر الزر أدناه.'),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: StreamBuilder<List<Asset>>(
+                stream: (db.select(db.assets)..where((t) => t.storeId.equals(store.id))).watch(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+                  final assets = snapshot.data!;
+                  if (assets.isEmpty) {
+                    return const Center(child: Text('لا توجد أصناف مسجلة في هذا المخزن حالياً.', style: TextStyle(fontSize: 16, color: Colors.grey)));
+                  }
+                  return ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: assets.length,
+                    itemBuilder: (context, index) {
+                      final asset = assets[index];
+                      return Card(
+                        elevation: 2,
+                        margin: const EdgeInsets.only(bottom: 12),
+                        child: ListTile(
+                          leading: const CircleAvatar(backgroundColor: Color(0xFF1A5F7A), child: Icon(Icons.security, color: Colors.white)),
+                          title: Text('${asset.name} (${asset.category})', style: const TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: Text('رقم القطعة: ${asset.serialNumber} | الحالة: ${asset.status}'),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () async {
+                              await (db.delete(db.assets)..where((t) => t.id.equals(asset.id))).go();
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          backgroundColor: const Color(0xFF1A5F7A),
+          icon: const Icon(Icons.add, color: Colors.white),
+          label: const Text('إدخال صنف للمخزن', style: TextStyle(color: Colors.white)),
+          onPressed: () => _showAddAssetToStoreDialog(context, db, store.id),
+        ),
+      ),
+    );
+  }
+
+  void _showAddAssetToStoreDialog(BuildContext context, AppDatabase db, int storeId) {
+    final serialController = TextEditingController();
+    final nameController = TextEditingController();
+    final specsController = TextEditingController();
+    String category = 'weapon';
+
+    showDialog(
+      context: context,
+      builder: (context) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: Text('إضافة صنف جديد إلى مخزن: ${store.name}'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(controller: serialController, decoration: const InputDecoration(labelText: 'رقم القطعة / الباركود')),
+                TextField(controller: nameController, decoration: const InputDecoration(labelText: 'اسم الأصل (مثل: بندقية آلية / مركبة)')),
+                DropdownButtonFormField<String>(
+                  value: category,
+                  items: const [
+                    DropdownMenuItem(value: 'weapon', child: Text('سلاح / ذخيرة')),
+                    DropdownMenuItem(value: 'vehicle', child: Text('مركبة')),
+                    DropdownMenuItem(value: 'comms', child: Text('جهاز اتصال')),
+                    DropdownMenuItem(value: 'equipment', child: Text('تجهيزات عسكرية')),
+                  ],
+                  onChanged: (val) => category = val ?? 'weapon',
+                  decoration: const InputDecoration(labelText: 'التصنيف'),
+                ),
+                TextField(controller: specsController, decoration: const InputDecoration(labelText: 'المواصفات (الهيكل، المحرك، التشغيلة)')),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
+            ElevatedButton(
+              onPressed: () async {
+                if (serialController.text.isNotEmpty && nameController.text.isNotEmpty) {
+                  await db.into(db.assets).insert(AssetsCompanion.insert(
+                    serialNumber: serialController.text.trim(),
+                    name: nameController.text.trim(),
+                    category: category,
+                    storeId: Value(storeId),
+                    specs: specsController.text.trim().isNotEmpty ? Value(specsController.text.trim()) : const Value.absent(),
+                    status: const Value('in_store'),
                   ));
                   if (context.mounted) Navigator.pop(context);
                 }
@@ -396,7 +541,7 @@ class _EmployeesManagementScreenState extends ConsumerState<EmployeesManagementS
   }
 }
 
-// 3. إدارة العهد والأسلحة والأصول
+// 3. إدارة العهد والأسلحة والأصول العامة (مع إمكانية اختيار المخزن)
 class AssetsInventoryScreen extends ConsumerStatefulWidget {
   const AssetsInventoryScreen({super.key});
 
@@ -481,11 +626,20 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
     );
   }
 
-  void _showAddAssetDialog(BuildContext context, AppDatabase db) {
+  void _showAddAssetDialog(BuildContext context, AppDatabase db) async {
+    final stores = await db.select(db.stores).get();
+    if (stores.isEmpty && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('يرجى إضافة مخزن واحد على الأقل أولاً قبل إدخال العهد.')));
+      return;
+    }
+
     final serialController = TextEditingController();
     final nameController = TextEditingController();
     final specsController = TextEditingController();
     String category = 'weapon';
+    int? selectedStoreId = stores.isNotEmpty ? stores.first.id : null;
+
+    if (!context.mounted) return;
 
     showDialog(
       context: context,
@@ -510,6 +664,13 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
                   onChanged: (val) => category = val ?? 'weapon',
                   decoration: const InputDecoration(labelText: 'التصنيف'),
                 ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<int>(
+                  value: selectedStoreId,
+                  items: stores.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))).toList(),
+                  onChanged: (val) => selectedStoreId = val,
+                  decoration: const InputDecoration(labelText: 'المخزن التابع له'),
+                ),
                 TextField(controller: specsController, decoration: const InputDecoration(labelText: 'المواصفات (الهيكل، المحرك، التشغيلة)')),
               ],
             ),
@@ -518,13 +679,14 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
             TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
             ElevatedButton(
               onPressed: () async {
-                if (serialController.text.isNotEmpty && nameController.text.isNotEmpty) {
+                if (serialController.text.isNotEmpty && nameController.text.isNotEmpty && selectedStoreId != null) {
                   await db.into(db.assets).insert(AssetsCompanion.insert(
                     serialNumber: serialController.text.trim(),
                     name: nameController.text.trim(),
                     category: category,
+                    storeId: Value(selectedStoreId),
                     specs: specsController.text.trim().isNotEmpty ? Value(specsController.text.trim()) : const Value.absent(),
-                    status: Value('in_store'),
+                    status: const Value('in_store'),
                   ));
                   if (context.mounted) Navigator.pop(context);
                 }
