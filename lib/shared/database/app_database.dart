@@ -49,6 +49,7 @@ class AppDatabase extends _$AppDatabase {
     onCreate: (m) => m.createAll(),
     onUpgrade: (m, from, to) async {
       if (from < 2) {
+        // إصلاح: استخدام مراجع الجداول الصحيحة المولدة
         await m.createTable(assets);
         await m.addColumn(employees, employees.rank);
         await m.addColumn(stores, stores.location);
