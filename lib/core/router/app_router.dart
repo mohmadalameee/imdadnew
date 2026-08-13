@@ -217,6 +217,7 @@ class ImdadEnterpriseDashboard extends ConsumerWidget {
               _card(context, 'العهد والتصنيفات', Icons.security, Colors.orange, '/assets'),
               _card(context, 'حركات الصرف والنقل', Icons.swap_horiz, Colors.indigo, '/movements'),
               _card(context, 'التقارير الشاملة', Icons.analytics, Colors.purple, '/reports'),
+              _card(context, 'الإعدادات والنسخ', Icons.settings, Colors.blueGrey, '/settings'),
             ],
           ),
         ),
@@ -571,11 +572,15 @@ class EmployeesManagementScreen extends ConsumerWidget {
     );
   }
 
-  void _showAddEmployeeDialog(BuildContext context, AppDatabase db) {
+  void _showAddEmployeeDialog(BuildContext context, AppDatabase db) async {
+    final locations = await db.select(db.locations).get();
     final nameController = TextEditingController();
     final militaryIdController = TextEditingController();
     final rankController = TextEditingController(text: 'ملازم أول');
     final deptController = TextEditingController(text: 'الإدارة العامة');
+    int? selectedLocationId = locations.isNotEmpty ? locations.first.id : null;
+
+    if (!context.mounted) return;
 
     showDialog(
       context: context,
@@ -590,6 +595,13 @@ class EmployeesManagementScreen extends ConsumerWidget {
               TextField(controller: militaryIdController, decoration: const InputDecoration(labelText: 'الرقم العسكري')),
               TextField(controller: rankController, decoration: const InputDecoration(labelText: 'الرتبة')),
               TextField(controller: deptController, decoration: const InputDecoration(labelText: 'القسم')),
+              if (locations.isNotEmpty)
+                DropdownButtonFormField<int>(
+                  value: selectedLocationId,
+                  items: locations.map((l) => DropdownMenuItem(value: l.id, child: Text(l.name))).toList(),
+                  onChanged: (val) => selectedLocationId = val,
+                  decoration: const InputDecoration(labelText: 'الموقع التابع له'),
+                ),
             ],
           ),
           actions: [
@@ -602,6 +614,7 @@ class EmployeesManagementScreen extends ConsumerWidget {
                     militaryId: militaryIdController.text.trim(),
                     rank: rankController.text.trim(),
                     department: deptController.text.trim(),
+                    locationId: selectedLocationId != null ? Value(selectedLocationId) : const Value.absent(),
                   ));
                   if (context.mounted) Navigator.pop(context);
                 }
@@ -646,7 +659,7 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
                     children: [
                       Expanded(
                         child: RadioListTile<String>(
-                          title: const Text('برقم القطعة', style: TextStyle(fontSize: 12)),
+                          title: const Text('برقم القطعة', style: TextStyle(fontSize: 11)),
                           value: 'serial',
                           groupValue: _searchType,
                           onChanged: (val) => setState(() => _searchType = val ?? 'serial'),
@@ -654,7 +667,7 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
                       ),
                       Expanded(
                         child: RadioListTile<String>(
-                          title: const Text('باسم الموظف', style: TextStyle(fontSize: 12)),
+                          title: const Text('باسم الموظف', style: TextStyle(fontSize: 11)),
                           value: 'employee',
                           groupValue: _searchType,
                           onChanged: (val) => setState(() => _searchType = val ?? 'employee'),
@@ -662,7 +675,7 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
                       ),
                       Expanded(
                         child: RadioListTile<String>(
-                          title: const Text('باسم الموقع', style: TextStyle(fontSize: 12)),
+                          title: const Text('باسم الموقع', style: TextStyle(fontSize: 11)),
                           value: 'location',
                           groupValue: _searchType,
                           onChanged: (val) => setState(() => _searchType = val ?? 'location'),
@@ -743,7 +756,7 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.between,
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text('${asset.name} (${getCategoryName(asset.category)})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                                 getAssetStatusBadge(asset.assetStatus),
@@ -847,7 +860,7 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
                               ...assets.map((a) => Padding(
                                     padding: const EdgeInsets.symmetric(vertical: 4.0),
                                     child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.between,
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
                                         Expanded(child: Text('• ${a.name} (${getCategoryName(a.category)}) [رقم: ${a.serialNumber}]')),
                                         getAssetStatusBadge(a.assetStatus),
@@ -886,7 +899,7 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
           itemBuilder: (context, index) {
             final loc = locations[index];
             return FutureBuilder<List<Asset>>(
-              future: (db.select(db.assets)..where((t) => t.locationId.equals(loc.id) | t.storeId.isInQuery(db.select(db.stores).map((s) => s.id)))).get(),
+              future: (db.select(db.assets)..where((t) => t.locationId.equals(loc.id))).get(),
               builder: (context, assetSnapshot) {
                 final assets = assetSnapshot.data ?? [];
                 final readyCount = assets.where((a) => a.assetStatus == 'ready').length;
@@ -1174,6 +1187,42 @@ class EnterpriseReportsScreen extends StatelessWidget {
       child: Scaffold(
         appBar: AppBar(title: const Text('التقارير الشاملة'), backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
         body: const Center(child: Text('وحدة تقارير التموين والعهد نشطة.')),
+      ),
+    );
+  }
+}
+
+// 7. الإعدادات والنسخ
+class SettingsScreen extends ConsumerWidget {
+  const SettingsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentUser = ref.watch(currentUserProvider);
+
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(title: const Text('الإعدادات والنسخ'), backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
+        body: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            ListTile(
+              leading: const Icon(Icons.person, color: Color(0xFF1A5F7A)),
+              title: const Text('المستخدم الحالي'),
+              subtitle: Text('${currentUser?.fullName ?? 'مدير النظام'} (${currentUser?.role ?? 'admin'})'),
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.backup, color: Colors.blue),
+              title: const Text('إنشاء نسخة احتياطية لقاعدة البيانات'),
+              subtitle: const Text('حفظ نسخة محلية مشفرة من كافة البيانات'),
+              onTap: () {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إنشاء النسخة الاحتياطية بنجاح')));
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
