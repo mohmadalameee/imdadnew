@@ -12,7 +12,7 @@ class Users extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get username => text().unique()();
   TextColumn get fullName => text()();
-  TextColumn get role => text()(); // admin, supply_manager, storekeeper, custodian, vehicle_officer, weapon_officer, readonly
+  TextColumn get role => text()(); 
   TextColumn get passwordHash => text()();
 }
 
@@ -31,15 +31,15 @@ class Employees extends Table {
   TextColumn get militaryId => text().unique()(); // الرقم العسكري / الوظيفي
   TextColumn get rank => text()(); // الرتبة
   TextColumn get department => text()(); // الإدارة / القسم
-  IntColumn get locationId => integer().references(Locations, #id).nullable()(); // الموقع التابع له الموظف
-  TextColumn get status => text().withDefault(const Constant('active'))(); // active, suspended, retired
+  IntColumn get locationId => integer().references(Locations, #id).nullable()(); 
+  TextColumn get status => text().withDefault(const Constant('active'))(); 
 }
 
 // 4. جدول المخازن
 class Stores extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get name => text()();
-  TextColumn get type => text().withDefault(const Constant('main'))(); // main, sub
+  TextColumn get type => text().withDefault(const Constant('main'))(); 
   TextColumn get location => text()();
 }
 
@@ -68,23 +68,23 @@ class Assets extends Table {
   TextColumn get status => text().withDefault(const Constant('in_store'))(); // in_store, assigned
   IntColumn get storeId => integer().references(Stores, #id).nullable()();
   IntColumn get employeeId => integer().references(Employees, #id).nullable()();
-  IntColumn get locationId => integer().references(Locations, #id).nullable()(); // الموقع المتواجد فيه القطعة
+  IntColumn get locationId => integer().references(Locations, #id).nullable()(); 
   DateTimeColumn get receivedDate => dateTime().nullable()();
-  TextColumn get specs => text().nullable()(); // مواصفات إضافية
+  TextColumn get specs => text().nullable()(); 
 }
 
-// 6. جدول حركة العهد والأصول (Audit & Movement History)
+// 6. جدول حركة العهد والأصول
 class AssetMovements extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get assetId => integer().references(Assets, #id)();
   IntColumn get fromEmployeeId => integer().references(Employees, #id).nullable()();
   IntColumn get toEmployeeId => integer().references(Employees, #id).nullable()();
-  TextColumn get movementType => text()(); // issue, return, transfer, maintenance
+  TextColumn get movementType => text()(); 
   DateTimeColumn get timestamp => dateTime().withDefault(currentDateAndTime)();
   TextColumn get notes => text().nullable()();
 }
 
-// 7. جدول سجل العمليات العام (Audit Logs)
+// 7. جدول سجل العمليات العام
 class AuditLogs extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get username => text()();
@@ -98,20 +98,13 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 4; // ترقية النسخة لدعم المواقع والتصنيفات الجديدة
+  int get schemaVersion => 5; // إصدار جديد تماماً لتجنب أي تخزين مؤقت
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) => m.createAll(),
     onUpgrade: (m, from, to) async {
-      if (from < 4) {
-        await m.createTable(locations);
-        try {
-          await m.addColumn(employees, employees.locationId);
-          await m.addColumn(assets, assets.assetStatus);
-          await m.addColumn(assets, assets.locationId);
-        } catch (_) {}
-      }
+      await m.createAll();
     },
   );
 }
@@ -119,7 +112,7 @@ class AppDatabase extends _$AppDatabase {
 LazyDatabase _openConnection() {
   return LazyDatabase(() async {
     final directory = await getApplicationDocumentsDirectory();
-    final file = File(path.join(directory.path, 'imdad_enterprise_v4.db'));
+    final file = File(path.join(directory.path, 'imdad_enterprise_v5.db'));
     return NativeDatabase.createInBackground(file);
   });
 }
