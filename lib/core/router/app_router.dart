@@ -188,7 +188,7 @@ class ImdadEnterpriseDashboard extends ConsumerWidget {
   }
 }
 
-// 1. إدارة المخازن (مع إمكانية النقر لعرض جرد المخزن)
+// 1. إدارة المخازن (مع إمكانية النقر لعرض المحتويات وإدخال الأصناف)
 class StoresManagementScreen extends ConsumerWidget {
   const StoresManagementScreen({super.key});
 
@@ -219,7 +219,7 @@ class StoresManagementScreen extends ConsumerWidget {
                   child: ListTile(
                     leading: const CircleAvatar(backgroundColor: Color(0xFF1A5F7A), child: Icon(Icons.store, color: Colors.white)),
                     title: Text(store.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text('النوع: ${store.type} | الموقع: ${store.location}\nانقر لعرض الأصناف وجرد المخزن'),
+                    subtitle: Text('النوع: ${store.type} | الموقع: ${store.location}\nانقر لعرض محتويات المخزن وإدخال الأصناف'),
                     isThreeLine: true,
                     onTap: () => context.push('/store-details', extra: store),
                     trailing: IconButton(
@@ -283,7 +283,7 @@ class StoresManagementScreen extends ConsumerWidget {
   }
 }
 
-// 1.1 شاشة تفاصيل المخزن وإدخال الأصناف بداخله مباشرة
+// 1.1 شاشة تفاصيل المخزن ومحتوياته مع زر إدخال الأصناف
 class StoreDetailsScreen extends ConsumerWidget {
   final Store store;
   const StoreDetailsScreen({super.key, required this.store});
@@ -758,7 +758,7 @@ class EnterpriseReportsScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('تقارير النظام وجرد الأصول والعهد', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1A5F7A))),
+              const Text('تقارير النظام والعهد والأصول', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1A5F7A))),
               const SizedBox(height: 16),
               Card(
                 child: ListTile(
@@ -778,7 +778,7 @@ class EnterpriseReportsScreen extends ConsumerWidget {
                 child: ListTile(
                   leading: const Icon(Icons.table_chart, color: Colors.green, size: 40),
                   title: const Text('تصدير سجل الموظفين والمخازن (Excel)'),
-                  subtitle: const Text('ملف بيانات متوافق مع أنظمة الجرد الحكومي'),
+                  subtitle: const Text('ملف بيانات متوافق مع أنظمة الإدارة الحكومية'),
                   trailing: ElevatedButton(
                     onPressed: () {
                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تصدير البيانات بنجاح (Excel)')));
