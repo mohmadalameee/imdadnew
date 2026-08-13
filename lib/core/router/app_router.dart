@@ -44,7 +44,7 @@ class _SplashScreenState extends State<SplashScreen> {
       child: Scaffold(
         body: Center(
           child: Column(
-            mainAxisAlignment: Main Plan: MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(Icons.inventory_2_outlined, size: 80, color: Color(0xFF1A5F7A)),
               SizedBox(height: 24),
