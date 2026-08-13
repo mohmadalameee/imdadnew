@@ -13,7 +13,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    // إصلاح الخطأ: استخدام التنسيق الصحيح لـ Kotlin DSL
     tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
         kotlinOptions {
             jvmTarget = "17"
@@ -31,8 +30,9 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("debug")
-            minifyEnabled = false
-            shrinkResources = false
+            // إصلاح الخطأ: استخدام البادئة is في Kotlin DSL
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }
