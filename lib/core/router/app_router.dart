@@ -244,6 +244,7 @@ class EmployeesScreen extends ConsumerWidget {
 
   void _showAssets(BuildContext context, AppDatabase db, Employee emp) async {
     final assets = await (db.select(db.assets)..where((t) => t.employeeId.equals(emp.id))).get();
+    if (!context.mounted) return;
     showModalBottomSheet(
       context: context,
       builder: (context) => Directionality(
