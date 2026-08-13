@@ -188,7 +188,7 @@ class ImdadEnterpriseDashboard extends ConsumerWidget {
   }
 }
 
-// 1. إدارة المخازن (مع إمكانية النقر لعرض المحتويات وإدخال الأصناف)
+// 1. إدارة المخازن الرئيسية والفرعية
 class StoresManagementScreen extends ConsumerWidget {
   const StoresManagementScreen({super.key});
 
@@ -419,7 +419,7 @@ class StoreDetailsScreen extends ConsumerWidget {
   }
 }
 
-// 2. إدارة الموظفين
+// 2. إدارة الموظفين والكوادر
 class EmployeesManagementScreen extends ConsumerStatefulWidget {
   const EmployeesManagementScreen({super.key});
 
@@ -437,7 +437,7 @@ class _EmployeesManagementScreenState extends ConsumerState<EmployeesManagementS
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        appBar: AppBar(title: const Text('إدارة الموظفين والكوادر'), backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
+        appBar: AppBar(title: const Text('سجل الموظفين والكوادر'), backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
         body: Column(
           children: [
             Padding(
@@ -457,7 +457,7 @@ class _EmployeesManagementScreenState extends ConsumerState<EmployeesManagementS
                     employees = employees.where((e) => e.name.contains(_searchQuery) || e.militaryId.contains(_searchQuery)).toList();
                   }
                   if (employees.isEmpty) {
-                    return const Center(child: Text('لا يوجد موظفون مطابقة للبحث.', style: TextStyle(fontSize: 16, color: Colors.grey)));
+                    return const Center(child: Text('لا يوجد موظفون مسجلون حالياً.', style: TextStyle(fontSize: 16, color: Colors.grey)));
                   }
                   return ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -470,7 +470,7 @@ class _EmployeesManagementScreenState extends ConsumerState<EmployeesManagementS
                         child: ListTile(
                           leading: const CircleAvatar(backgroundColor: Color(0xFF1A5F7A), child: Icon(Icons.badge, color: Colors.white)),
                           title: Text('${emp.rank} / ${emp.name}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                          subtitle: Text('الرقم العسكري: ${emp.militaryId} | القسم: ${emp.department}'),
+                          subtitle: Text('الرقم العسكري: ${emp.militaryId} | القسم: ${emp.department} | الحالة: ${emp.status}'),
                           trailing: IconButton(
                             icon: const Icon(Icons.delete, color: Colors.red),
                             onPressed: () async {
@@ -528,6 +528,7 @@ class _EmployeesManagementScreenState extends ConsumerState<EmployeesManagementS
                     militaryId: militaryIdController.text.trim(),
                     rank: rankController.text.trim(),
                     department: deptController.text.trim(),
+                    status: const Value('active'),
                   ));
                   if (context.mounted) Navigator.pop(context);
                 }
@@ -541,7 +542,7 @@ class _EmployeesManagementScreenState extends ConsumerState<EmployeesManagementS
   }
 }
 
-// 3. إدارة العهد والأسلحة والأصول العامة (مع إمكانية اختيار المخزن)
+// 3. إدارة العهد والأصول والأسلحة (مع البحث برقم القطعة وإمكانية الصرف والإرجاع)
 class AssetsInventoryScreen extends ConsumerStatefulWidget {
   const AssetsInventoryScreen({super.key});
 
@@ -559,7 +560,7 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        appBar: AppBar(title: const Text('إدارة الأسلحة والعهد والمركبات'), backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
+        appBar: AppBar(title: const Text('العهد والأصول والأسلحة'), backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
         body: Column(
           children: [
             Padding(
@@ -583,7 +584,7 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
                     assets = assets.where((a) => a.serialNumber.contains(_serialSearch)).toList();
                   }
                   if (assets.isEmpty) {
-                    return const Center(child: Text('لا توجد عهد أو أصول مطابقة للبحث برقم القطعة.', style: TextStyle(fontSize: 16, color: Colors.grey)));
+                    return const Center(child: Text('لا توجد عهد أو أصول مطابقة للبحث.', style: TextStyle(fontSize: 16, color: Colors.grey)));
                   }
                   return ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -602,11 +603,21 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
                           title: Text('${asset.name} (${asset.category})', style: const TextStyle(fontWeight: FontWeight.bold)),
                           subtitle: Text('رقم القطعة: ${asset.serialNumber}\nالحالة: ${isAssigned ? "مصروفة لموظف" : "متواجدة في المخزن"} | المواصفات: ${asset.specs ?? 'لا توجد'}'),
                           isThreeLine: true,
-                          trailing: IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () async {
-                              await (db.delete(db.assets)..where((t) => t.id.equals(asset.id))).go();
-                            },
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: Icon(isAssigned ? Icons.keyboard_return : Icons.send, color: const Color(0xFF1A5F7A)),
+                                tooltip: isAssigned ? 'إرجاع للمخزن' : 'صرف لموظف',
+                                onPressed: () => _showMovementDialog(context, db, asset),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete, color: Colors.red),
+                                onPressed: () async {
+                                  await (db.delete(db.assets)..where((t) => t.id.equals(asset.id))).go();
+                                },
+                              ),
+                            ],
                           ),
                         ),
                       );
@@ -652,7 +663,7 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(controller: serialController, decoration: const InputDecoration(labelText: 'رقم القطعة / الباركود')),
-                TextField(controller: nameController, decoration: const InputDecoration(labelText: 'اسم الأصل (مثل: بندقية آلية / مركبة تويوتا)')),
+                TextField(controller: nameController, decoration: const InputDecoration(labelText: 'اسم الأصل (مثل: بندقية آلية / مركبة)')),
                 DropdownButtonFormField<String>(
                   value: category,
                   items: const [
@@ -698,9 +709,90 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
       ),
     );
   }
+
+  void _showMovementDialog(BuildContext context, AppDatabase db, Asset asset) async {
+    final employees = await db.select(db.employees).get();
+    if (employees.isEmpty && asset.status != 'assigned' && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('يرجى إضافة موظفين أولاً لتسجيل صرف عهدة لهم.')));
+      return;
+    }
+
+    int? selectedEmployeeId = employees.isNotEmpty ? employees.first.id : null;
+    final notesController = TextEditingController();
+    final isAssigned = asset.status == 'assigned';
+
+    if (!context.mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: Text(isAssigned ? 'إرجاع العهدة للمخزن' : 'صرف العهدة لموظف'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (!isAssigned) ...[
+                DropdownButtonFormField<int>(
+                  value: selectedEmployeeId,
+                  items: employees.map((e) => DropdownMenuItem(value: e.id, child: Text('${e.rank} / ${e.name}'))).toList(),
+                  onChanged: (val) => selectedEmployeeId = val,
+                  decoration: const InputDecoration(labelText: 'الموظف المستلم'),
+                ),
+                const SizedBox(height: 12),
+              ],
+              TextField(
+                controller: notesController,
+                decoration: const InputDecoration(labelText: 'ملاحظات الحركة'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
+            ElevatedButton(
+              onPressed: () async {
+                if (isAssigned) {
+                  // إرجاع للمخزن
+                  await (db.update(db.assets)..where((t) => t.id.equals(asset.id))).write(
+                    AssetsCompanion(
+                      status: const Value('in_store'),
+                      employeeId: const Value(null),
+                    ),
+                  );
+                  await db.into(db.assetMovements).insert(AssetMovementsCompanion.insert(
+                    assetId: asset.id,
+                    movementType: 'return',
+                    notes: Value(notesController.text.trim().isNotEmpty ? notesController.text.trim() : 'إرجاع عهدة للمخزن'),
+                  ));
+                } else {
+                  // صرف لموظف
+                  if (selectedEmployeeId != null) {
+                    await (db.update(db.assets)..where((t) => t.id.equals(asset.id))).write(
+                      AssetsCompanion(
+                        status: const Value('assigned'),
+                        employeeId: Value(selectedEmployeeId),
+                      ),
+                    );
+                    await db.into(db.assetMovements).insert(AssetMovementsCompanion.insert(
+                      assetId: asset.id,
+                      toEmployeeId: Value(selectedEmployeeId),
+                      movementType: 'issue',
+                      notes: Value(notesController.text.trim().isNotEmpty ? notesController.text.trim() : 'صرف عهدة لموظف'),
+                    ));
+                  }
+                }
+                if (context.mounted) Navigator.pop(context);
+              },
+              child: const Text('تأكيد'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-// 4. حركات الصرف والنقل
+// 4. حركات الصرف والنقل التاريخية
 class AssetMovementsScreen extends ConsumerWidget {
   const AssetMovementsScreen({super.key});
 
@@ -711,7 +803,7 @@ class AssetMovementsScreen extends ConsumerWidget {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        appBar: AppBar(title: const Text('سجل حركات الصرف والإرجاع والتسوية'), backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
+        appBar: AppBar(title: const Text('حركات الصرف والنقل'), backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
         body: StreamBuilder<List<AssetMovement>>(
           stream: db.select(db.assetMovements).watch(),
           builder: (context, snapshot) {
@@ -730,7 +822,7 @@ class AssetMovementsScreen extends ConsumerWidget {
                   margin: const EdgeInsets.only(bottom: 12),
                   child: ListTile(
                     leading: const CircleAvatar(backgroundColor: Color(0xFF1A5F7A), child: Icon(Icons.swap_horiz, color: Colors.white)),
-                    title: Text('نوع الحركة: ${mov.movementType}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    title: Text('نوع الحركة: ${mov.movementType == 'issue' ? 'صرف عهدة' : 'إرجاع للمخزن'}', style: const TextStyle(fontWeight: FontWeight.bold)),
                     subtitle: Text('التاريخ: ${mov.timestamp}\nملاحظات: ${mov.notes ?? 'لا توجد'}'),
                   ),
                 );
@@ -752,7 +844,7 @@ class EnterpriseReportsScreen extends ConsumerWidget {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        appBar: AppBar(title: const Text('التقارير الحكومية المؤسسية'), backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
+        appBar: AppBar(title: const Text('التقارير الشاملة'), backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
         body: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -806,7 +898,7 @@ class SettingsScreen extends ConsumerWidget {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        appBar: AppBar(title: const Text('الإعدادات والنسخ الاحتياطي'), backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
+        appBar: AppBar(title: const Text('الإعدادات والنسخ'), backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
         body: ListView(
           padding: const EdgeInsets.all(16),
           children: [
