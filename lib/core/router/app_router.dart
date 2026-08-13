@@ -800,6 +800,8 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
     int? selectedEmpId = employees.isNotEmpty ? employees.first.id : null;
     final isAssigned = asset.status == 'assigned';
 
+    if (!context.mounted) return;
+
     showDialog(
       context: context,
       builder: (context) => Directionality(
@@ -834,7 +836,9 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
                     );
                   }
                 }
-                if (context.mounted) Navigator.pop(context);
+                if (context.mounted) {
+                  Navigator.pop(context);
+                }
               },
               child: const Text('تأكيد'),
             ),
