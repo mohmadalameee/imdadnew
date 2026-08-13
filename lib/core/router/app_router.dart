@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../shared/database/app_database.dart';
-import 'package:drift/drift.dart' as drift;
 
 // موفر لحفظ المستخدم الحالي الجلوس (Session State)
 final currentUserProvider = StateProvider<User?>((ref) => null);
