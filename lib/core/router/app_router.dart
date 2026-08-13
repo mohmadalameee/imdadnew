@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:drift/drift.dart' hide Column;
 import '../../shared/database/app_database.dart';
 
 // موفر لحفظ المستخدم الحالي الجلوس (Session State)
@@ -41,10 +42,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     var user = await (db.select(db.users)..where((t) => t.username.equals(username))).getSingleOrNull();
     if (user == null && username == 'admin') {
       await db.into(db.users).insert(UsersCompanion.insert(
-        username: 'admin',
+        username: username,
         fullName: 'مدير النظام العام',
         role: 'admin',
-        passwordHash: 'admin123',
+        passwordHash: password,
       ));
       user = await (db.select(db.users)..where((t) => t.username.equals('admin'))).getSingleOrNull();
     }
@@ -180,10 +181,6 @@ class ImdadEnterpriseDashboard extends ConsumerWidget {
   }
 }
 
-// =========================================================================
-// --- Fully Implemented Functional Modules (وحدات النظام الفعلية) ---
-// =========================================================================
-
 // 1. إدارة المخازن
 class StoresManagementScreen extends ConsumerWidget {
   const StoresManagementScreen({super.key});
@@ -263,7 +260,7 @@ class StoresManagementScreen extends ConsumerWidget {
                   await db.into(db.stores).insert(StoresCompanion.insert(
                     name: nameController.text.trim(),
                     location: locationController.text.trim(),
-                    type: type,
+                    type: Value(type),
                   ));
                   if (context.mounted) Navigator.pop(context);
                 }
@@ -399,7 +396,7 @@ class _EmployeesManagementScreenState extends ConsumerState<EmployeesManagementS
   }
 }
 
-// 3. إدارة العهد والأسلحة والأصول (مع البحث الذكي برقم القطعة)
+// 3. إدارة العهد والأسلحة والأصول
 class AssetsInventoryScreen extends ConsumerStatefulWidget {
   const AssetsInventoryScreen({super.key});
 
@@ -526,8 +523,8 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
                     serialNumber: serialController.text.trim(),
                     name: nameController.text.trim(),
                     category: category,
-                    specs: specsController.text.trim().isNotEmpty ? specsController.text.trim() : null,
-                    status: 'in_store',
+                    specs: specsController.text.trim().isNotEmpty ? Value(specsController.text.trim()) : const Value.absent(),
+                    status: Value('in_store'),
                   ));
                   if (context.mounted) Navigator.pop(context);
                 }
@@ -676,7 +673,7 @@ class SettingsScreen extends ConsumerWidget {
             const Divider(),
             const ListTile(
               leading: Icon(Icons.info, color: Colors.grey),
-              title: const Text('إصدار النظام'),
+              title: Text('إصدار النظام'),
               subtitle: Text('Enterprise Edition v3.2.0 - إمداد المؤسسي'),
             ),
           ],
