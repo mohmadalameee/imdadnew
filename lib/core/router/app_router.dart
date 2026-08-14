@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:drift/drift.dart' hide Column;
+import 'package:intl/intl.dart';
 import '../../shared/database/app_database.dart';
 
 final currentUserProvider = StateProvider<User?>((ref) => null);
@@ -33,6 +34,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/movements', builder: (context, state) => const AssetMovementsScreen()),
       GoRoute(path: '/reports', builder: (context, state) => const EnterpriseReportsScreen()),
       GoRoute(path: '/settings', builder: (context, state) => const SettingsScreen()),
+      
+      // مسارات موديولات الوقود والمركبات الجديدة
+      GoRoute(path: '/vehicles', builder: (context, state) => const VehiclesManagementScreen()),
+      GoRoute(path: '/fuel-recipients', builder: (context, state) => const FuelRecipientsScreen()),
+      GoRoute(path: '/fuel-dispense', builder: (context, state) => const FuelDispensingScreen()),
+      GoRoute(path: '/commander-directives', builder: (context, state) => const CommanderDirectivesScreen()),
     ],
   );
 });
@@ -202,20 +209,60 @@ class ImdadEnterpriseDashboard extends ConsumerWidget {
             ),
           ],
         ),
-        body: Padding(
+        body: SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
-          child: GridView.count(
-            crossAxisCount: 2,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _card(context, 'المواقع والنقاط', Icons.location_on, Colors.teal, '/locations'),
-              _card(context, 'المخازن والمستودعات', Icons.store, Colors.blue, '/stores'),
-              _card(context, 'سجل الموظفين والعهد', Icons.badge, Colors.green, '/employees'),
-              _card(context, 'العهد والتصنيفات والكميات', Icons.security, Colors.orange, '/assets'),
-              _card(context, 'حركات الصرف والنقل', Icons.swap_horiz, Colors.indigo, '/movements'),
-              _card(context, 'تقرير حركة الصنف والشامل', Icons.analytics, Colors.purple, '/reports'),
-              _card(context, 'الإعدادات والنسخ', Icons.settings, Colors.blueGrey, '/settings'),
+              const Text('اللوجستيات والعهد', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1A5F7A))),
+              const SizedBox(height: 12),
+              GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 1.5,
+                children: [
+                  _card(context, 'المواقع والنقاط', Icons.location_on, Colors.teal, '/locations'),
+                  _card(context, 'المخازن والمستودعات', Icons.store, Colors.blue, '/stores'),
+                  _card(context, 'سجل الموظفين والعهد', Icons.badge, Colors.green, '/employees'),
+                  _card(context, 'العهد والكميات والبحث', Icons.security, Colors.orange, '/assets'),
+                ],
+              ),
+              const SizedBox(height: 24),
+              const Text('إدارة المركبات والوقود', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1A5F7A))),
+              const SizedBox(height: 12),
+              GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 1.5,
+                children: [
+                  _card(context, 'سجل المركبات', Icons.directions_car, Colors.indigo, '/vehicles'),
+                  _card(context, 'حصص الوقود', Icons.local_gas_station, Colors.redAccent, '/fuel-recipients'),
+                  _card(context, 'صرف وقود', Icons.ev_station, Colors.deepOrange, '/fuel-dispense'),
+                  _card(context, 'توجيهات القادة', Icons.assignment, Colors.brown, '/commander-directives'),
+                ],
+              ),
+              const SizedBox(height: 24),
+              const Text('التقارير والنظام', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1A5F7A))),
+              const SizedBox(height: 12),
+              GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 1.5,
+                children: [
+                  _card(context, 'حركات الصرف', Icons.swap_horiz, Colors.blueGrey, '/movements'),
+                  _card(context, 'التقارير الشاملة', Icons.analytics, Colors.purple, '/reports'),
+                  _card(context, 'الإعدادات والنسخ', Icons.settings, Colors.blueGrey, '/settings'),
+                ],
+              ),
             ],
           ),
         ),
@@ -226,16 +273,16 @@ class ImdadEnterpriseDashboard extends ConsumerWidget {
   Widget _card(BuildContext context, String title, IconData icon, Color color, String route) {
     return Card(
       elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         onTap: () => context.push(route),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 48, color: color),
-            const SizedBox(height: 12),
-            Text(title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            Icon(icon, size: 36, color: color),
+            const SizedBox(height: 8),
+            Text(title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
           ],
         ),
       ),
@@ -243,7 +290,7 @@ class ImdadEnterpriseDashboard extends ConsumerWidget {
   }
 }
 
-// 1. نظام المواقع والنقاط
+// --- 1. نظام المواقع والنقاط ---
 class LocationsManagementScreen extends ConsumerWidget {
   const LocationsManagementScreen({super.key});
 
@@ -403,7 +450,7 @@ class LocationDetailsScreen extends ConsumerWidget {
   }
 }
 
-// 2. إدارة المخازن (مع زر إدخال أصناف بارز ودعم الكميات)
+// --- 2. إدارة المخازن ---
 class StoresManagementScreen extends ConsumerWidget {
   const StoresManagementScreen({super.key});
 
@@ -731,7 +778,7 @@ class StoreDetailsScreen extends ConsumerWidget {
   }
 }
 
-// 3. سجل الموظفين
+// --- 3. سجل الموظفين ---
 class EmployeesManagementScreen extends ConsumerWidget {
   const EmployeesManagementScreen({super.key});
 
@@ -869,7 +916,7 @@ class EmployeesManagementScreen extends ConsumerWidget {
   }
 }
 
-// 4. العهد والبحث المتقدم الشامل (مع عرض الوارد والمتبقي)
+// --- 4. العهد والبحث المتقدم ---
 class AssetsInventoryScreen extends ConsumerStatefulWidget {
   const AssetsInventoryScreen({super.key});
 
@@ -889,7 +936,7 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        appBar: AppBar(title: const Text('العهد وإدارة الكميات والبحث الشامل'), backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
+        appBar: AppBar(title: const Text('العهد والبحث الشامل'), backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
         body: Column(
           children: [
             Padding(
@@ -900,7 +947,7 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
                     children: [
                       Expanded(
                         child: RadioListTile<String>(
-                          title: const Text('باسم الموظف وعهده', style: TextStyle(fontSize: 11)),
+                          title: const Text('باسم الموظف', style: TextStyle(fontSize: 11)),
                           value: 'employee',
                           groupValue: _searchType,
                           onChanged: (val) => setState(() => _searchType = val ?? 'employee'),
@@ -927,11 +974,7 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
                   TextField(
                     controller: _searchController,
                     decoration: InputDecoration(
-                      labelText: _searchType == 'employee'
-                          ? 'أدخل اسم الموظف لعرض كافة عهده وكمياتها'
-                          : _searchType == 'serial'
-                              ? 'أدخل رقم القطعة / كود الصنف'
-                              : 'أدخل اسم الموقع أو النقطة',
+                      labelText: 'أدخل نص البحث هنا...',
                       prefixIcon: const Icon(Icons.search),
                       border: const OutlineInputBorder(),
                     ),
@@ -967,9 +1010,8 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
         if (query.isNotEmpty) {
           employees = employees.where((e) => e.name.contains(query) || e.militaryId.contains(query)).toList();
         }
-        if (employees.isEmpty) {
-          return const Center(child: Text('لا توجد نتائج مطابقة لبحث الموظف.'));
-        }
+        if (employees.isEmpty) return const Center(child: Text('لا توجد نتائج مطابقة.'));
+        
         return ListView.builder(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           itemCount: employees.length,
@@ -979,67 +1021,26 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
               future: (db.select(db.assets)..where((t) => t.employeeId.equals(emp.id))).get(),
               builder: (context, assetSnapshot) {
                 final assets = assetSnapshot.data ?? [];
-                return FutureBuilder<Location?>(
-                  future: emp.locationId != null
-                      ? (db.select(db.locations)..where((t) => t.id.equals(emp.locationId!))).getSingleOrNull()
-                      : Future.value(null),
-                  builder: (context, locSnapshot) {
-                    final location = locSnapshot.data;
-                    return Card(
-                      elevation: 4,
-                      margin: const EdgeInsets.only(bottom: 16),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                const Icon(Icons.badge, color: Color(0xFF1A5F7A), size: 28),
-                                const SizedBox(width: 8),
-                                Text('${emp.rank} / ${emp.name}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF1A5F7A))),
-                              ],
-                            ),
-                            const Divider(),
-                            Text('الرقم العسكري: ${emp.militaryId} | القسم: ${emp.department}'),
-                            if (location != null) Text('الموقع التابع: ${location.name}'),
-                            const SizedBox(height: 12),
-                            Text('جميع العهد المقيدة على الموظف (${assets.length}):', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.orange)),
-                            const SizedBox(height: 8),
-                            if (assets.isEmpty)
-                              const Padding(
-                                padding: EdgeInsets.all(8.0),
-                                child: Text('لا توجد عهد مقيدة على هذا الموظف حالياً.', style: TextStyle(color: Colors.grey)),
-                              )
-                            else
-                              ...assets.map((a) => Container(
-                                    margin: const EdgeInsets.symmetric(vertical: 4),
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey.shade100,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                                      children: [
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(a.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                              Text('رقم القطعة: ${a.serialNumber} | الوارد: ${a.totalQuantity} | المتبقي: ${a.remainingQuantity}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                                            ],
-                                          ),
-                                        ),
-                                        getAssetStatusBadge(a.assetStatus),
-                                      ],
-                                    ),
-                                  )),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('${emp.rank} / ${emp.name}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1A5F7A))),
+                        Text('الرقم العسكري: ${emp.militaryId} | القسم: ${emp.department}'),
+                        const Divider(),
+                        Text('العهد المقيدة (${assets.length}):', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orange)),
+                        ...assets.map((a) => ListTile(
+                          dense: true,
+                          title: Text(a.name),
+                          subtitle: Text('رقم: ${a.serialNumber} | المتبقي: ${a.remainingQuantity}'),
+                          trailing: getAssetStatusBadge(a.assetStatus),
+                        )),
+                      ],
+                    ),
+                  ),
                 );
               },
             );
@@ -1058,92 +1059,20 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
         if (query.isNotEmpty) {
           assets = assets.where((a) => a.serialNumber.contains(query)).toList();
         }
-        if (assets.isEmpty) {
-          return const Center(child: Text('لا توجد قطع مطابقة.'));
-        }
+        if (assets.isEmpty) return const Center(child: Text('لا توجد قطع مطابقة.'));
+        
         return ListView.builder(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           itemCount: assets.length,
           itemBuilder: (context, index) {
             final asset = assets[index];
-            final isAssigned = asset.status == 'assigned';
-            return FutureBuilder<Employee?>(
-              future: asset.employeeId != null
-                  ? (db.select(db.employees)..where((t) => t.id.equals(asset.employeeId!))).getSingleOrNull()
-                  : Future.value(null),
-              builder: (context, empSnapshot) {
-                final employee = empSnapshot.data;
-                return FutureBuilder<Location?>(
-                  future: asset.locationId != null
-                      ? (db.select(db.locations)..where((t) => t.id.equals(asset.locationId!))).getSingleOrNull()
-                      : Future.value(null),
-                  builder: (context, locSnapshot) {
-                    final location = locSnapshot.data;
-                    return Card(
-                      elevation: 3,
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceAround,
-                              children: [
-                                Text('${asset.name} (${getCategoryName(asset.category)})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                                getAssetStatusBadge(asset.assetStatus),
-                              ],
-                            ),
-                            const Divider(),
-                            Text('رقم القطعة: ${asset.serialNumber}'),
-                            Text('الكمية الواردة: ${asset.totalQuantity} | الكمية المتبقية: ${asset.remainingQuantity}'),
-                            const SizedBox(height: 8),
-                            if (isAssigned && employee != null) ...[
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                color: Colors.orange.withValues(alpha: 0.1),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text('حالة الصرف: مصروفة لموظف', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange)),
-                                    Text('المستلم: ${employee.rank} / ${employee.name} (${employee.militaryId})'),
-                                    if (location != null) Text('الموقع الحالي: ${location.name}'),
-                                  ],
-                                ),
-                              ),
-                            ] else ...[
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                color: Colors.green.withValues(alpha: 0.1),
-                                child: Text('متوفرة في المخزن - المتبقي: ${asset.remainingQuantity}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
-                              ),
-                            ],
-                            const SizedBox(height: 8),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo, foregroundColor: Colors.white),
-                                  icon: const Icon(Icons.history),
-                                  label: const Text('تقرير الحركة'),
-                                  onPressed: () => _showAssetMovementHistory(context, db, asset),
-                                ),
-                                const SizedBox(width: 8),
-                                ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
-                                  icon: Icon(isAssigned ? Icons.keyboard_return : Icons.send),
-                                  label: Text(isAssigned ? 'إرجاع للمستودع' : 'صرف لموظف'),
-                                  onPressed: () => _showMovementDialog(context, db, asset),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
+            return Card(
+              child: ListTile(
+                title: Text(asset.name),
+                subtitle: Text('رقم: ${asset.serialNumber} | الكمية: ${asset.remainingQuantity}/${asset.totalQuantity}'),
+                trailing: getAssetStatusBadge(asset.assetStatus),
+                onTap: () => _showAssetMovementHistory(context, db, asset),
+              ),
             );
           },
         );
@@ -1158,49 +1087,21 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
         if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
         var locations = snapshot.data!;
         if (query.isNotEmpty) {
-          locations = locations.where((l) => l.name.contains(query) || l.supervisor.contains(query)).toList();
+          locations = locations.where((l) => l.name.contains(query)).toList();
         }
-        if (locations.isEmpty) {
-          return const Center(child: Text('لا توجد مواقع مطابقة.'));
-        }
+        if (locations.isEmpty) return const Center(child: Text('لا توجد مواقع مطابقة.'));
+        
         return ListView.builder(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           itemCount: locations.length,
           itemBuilder: (context, index) {
             final loc = locations[index];
-            return FutureBuilder<List<Asset>>(
-              future: (db.select(db.assets)..where((t) => t.locationId.equals(loc.id))).get(),
-              builder: (context, assetSnapshot) {
-                final assets = assetSnapshot.data ?? [];
-                int totalInAll = assets.fold(0, (sum, a) => sum + a.totalQuantity);
-                int totalRemAll = assets.fold(0, (sum, a) => sum + a.remainingQuantity);
-
-                return Card(
-                  elevation: 3,
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('تقرير جرد موقع: ${loc.name}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1A5F7A))),
-                        const Divider(),
-                        Text('المشرف المسؤول: ${loc.supervisor}'),
-                        Text('إجمالي الوارد: $totalInAll | إجمالي المتبقي: $totalRemAll', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.indigo)),
-                        const SizedBox(height: 8),
-                        Text('الأصناف في الموقع (${assets.length}):', style: const TextStyle(fontWeight: FontWeight.bold)),
-                        if (assets.isEmpty)
-                          const Text('لا توجد أصناف مسجلة في هذا الموقع.', style: TextStyle(color: Colors.grey))
-                        else
-                          ...assets.map((a) => Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 2.0),
-                                child: Text('• ${a.name} | الوارد: ${a.totalQuantity} | المتبقي: ${a.remainingQuantity}'),
-                              )),
-                      ],
-                    ),
-                  ),
-                );
-              },
+            return Card(
+              child: ListTile(
+                title: Text(loc.name),
+                subtitle: Text('المشرف: ${loc.supervisor}'),
+                onTap: () => context.push('/location-details', extra: loc),
+              ),
             );
           },
         );
@@ -1213,9 +1114,7 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
     final locations = await db.select(db.locations).get();
     
     if (stores.isEmpty) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أضف مستودعاً أولاً.')));
-      }
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أضف مستودعاً أولاً.')));
       return;
     }
 
@@ -1227,8 +1126,6 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
     String assetStatus = 'ready';
     int? selectedStoreId = stores.first.id;
     int? selectedLocationId = locations.isNotEmpty ? locations.first.id : null;
-
-    if (!context.mounted) return;
 
     showDialog(
       context: context,
@@ -1330,9 +1227,7 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
     final locations = await db.select(db.locations).get();
 
     if (employees.isEmpty && asset.status != 'assigned') {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أضف موظفين أولاً.')));
-      }
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أضف موظفين أولاً.')));
       return;
     }
 
@@ -1340,8 +1235,6 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
     int? selectedLocId = locations.isNotEmpty ? locations.first.id : null;
     final moveQtyController = TextEditingController(text: '1');
     final isAssigned = asset.status == 'assigned';
-
-    if (!context.mounted) return;
 
     showDialog(
       context: context,
@@ -1447,9 +1340,7 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
               builder: (context, snapshot) {
                 if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
                 final movements = snapshot.data!;
-                if (movements.isEmpty) {
-                  return const Text('لا توجد حركات مسجلة لهذا الصنف.');
-                }
+                if (movements.isEmpty) return const Text('لا توجد حركات مسجلة.');
                 return ListView.builder(
                   shrinkWrap: true,
                   itemCount: movements.length,
@@ -1458,8 +1349,8 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
                     return Card(
                       child: ListTile(
                         leading: const Icon(Icons.history, color: Colors.indigo),
-                        title: Text(m.movementType, style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text('الكمية: ${m.quantityMoved} | التفاصيل: ${m.notes ?? 'لا توجد ملاحظات'}\nالتاريخ: ${m.timestamp}'),
+                        title: Text(m.movementType),
+                        subtitle: Text('الكمية: ${m.quantityMoved} | التاريخ: ${DateFormat('yyyy-MM-dd HH:mm').format(m.timestamp)}'),
                       ),
                     );
                   },
@@ -1467,8 +1358,412 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
               },
             ),
           ),
+          actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('إغلاق'))],
+        ),
+      ),
+    );
+  }
+}
+
+// --- 5. موديول إدارة المركبات ---
+class VehiclesManagementScreen extends ConsumerWidget {
+  const VehiclesManagementScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final db = ref.watch(databaseProvider);
+
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(title: const Text('سجل وإدارة المركبات'), backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
+        body: StreamBuilder<List<Vehicle>>(
+          stream: db.select(db.vehicles).watch(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+            final vehicles = snapshot.data!;
+            if (vehicles.isEmpty) return const Center(child: Text('لا توجد مركبات مسجلة.'));
+            
+            return ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: vehicles.length,
+              itemBuilder: (context, index) {
+                final v = vehicles[index];
+                return Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.directions_car, color: Colors.indigo),
+                    title: Text('لوحة: ${v.plateNumber} (${v.type})'),
+                    subtitle: Text('الموديل: ${v.model} | الحالة: ${v.status}'),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      onPressed: () async {
+                        await (db.delete(db.vehicles)..where((t) => t.id.equals(v.id))).go();
+                      },
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+        ),
+        floatingActionButton: FloatingActionButton(
+          backgroundColor: const Color(0xFF1A5F7A),
+          child: const Icon(Icons.add, color: Colors.white),
+          onPressed: () => _showAddVehicleDialog(context, db),
+        ),
+      ),
+    );
+  }
+
+  void _showAddVehicleDialog(BuildContext context, AppDatabase db) {
+    final plateController = TextEditingController();
+    final typeController = TextEditingController(text: 'طقم عسكري');
+    final modelController = TextEditingController();
+    final chassisController = TextEditingController();
+    final engineController = TextEditingController();
+    String fuelType = 'ديزل';
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: AlertDialog(
+            title: const Text('إضافة مركبة جديدة'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(controller: plateController, decoration: const InputDecoration(labelText: 'رقم اللوحة')),
+                  TextField(controller: typeController, decoration: const InputDecoration(labelText: 'نوع المركبة')),
+                  TextField(controller: modelController, decoration: const InputDecoration(labelText: 'الموديل')),
+                  TextField(controller: chassisController, decoration: const InputDecoration(labelText: 'رقم الهيكل')),
+                  TextField(controller: engineController, decoration: const InputDecoration(labelText: 'رقم المحرك')),
+                  DropdownButtonFormField<String>(
+                    value: fuelType,
+                    items: const [
+                      DropdownMenuItem(value: 'ديزل', child: Text('ديزل')),
+                      DropdownMenuItem(value: 'بنزين', child: Text('بنزين')),
+                    ],
+                    onChanged: (v) => setState(() => fuelType = v ?? 'ديزل'),
+                    decoration: const InputDecoration(labelText: 'نوع الوقود'),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
+              ElevatedButton(
+                onPressed: () async {
+                  if (plateController.text.isEmpty) return;
+                  await db.into(db.vehicles).insert(VehiclesCompanion.insert(
+                    plateNumber: plateController.text.trim(),
+                    type: typeController.text.trim(),
+                    model: modelController.text.trim(),
+                    chassisNumber: chassisController.text.trim(),
+                    engineNumber: engineController.text.trim(),
+                    fuelType: fuelType,
+                  ));
+                  if (context.mounted) Navigator.pop(context);
+                },
+                child: const Text('حفظ'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// --- 6. موديول إدارة الوقود ---
+class FuelRecipientsScreen extends ConsumerWidget {
+  const FuelRecipientsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final db = ref.watch(databaseProvider);
+
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(title: const Text('سجل حصص الوقود'), backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
+        body: StreamBuilder<List<FuelRecipient>>(
+          stream: db.select(db.fuelRecipients).watch(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+            final recipients = snapshot.data!;
+            if (recipients.isEmpty) return const Center(child: Text('لا توجد سجلات حصص.'));
+            
+            return ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: recipients.length,
+              itemBuilder: (context, index) {
+                final r = recipients[index];
+                return Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.local_gas_station, color: Colors.redAccent),
+                    title: Text(r.name),
+                    subtitle: Text('الحصة الشهرية: ${r.monthlyQuota} لتر (${r.fuelType})'),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      onPressed: () async {
+                        await (db.delete(db.fuelRecipients)..where((t) => t.id.equals(r.id))).go();
+                      },
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+        ),
+        floatingActionButton: FloatingActionButton(
+          backgroundColor: const Color(0xFF1A5F7A),
+          child: const Icon(Icons.add, color: Colors.white),
+          onPressed: () => _showAddFuelRecipientDialog(context, db),
+        ),
+      ),
+    );
+  }
+
+  void _showAddFuelRecipientDialog(BuildContext context, AppDatabase db) {
+    final nameController = TextEditingController();
+    final quotaController = TextEditingController(text: '100');
+    String fuelType = 'ديزل';
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: AlertDialog(
+            title: const Text('إضافة مستفيد وقود جديد'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(controller: nameController, decoration: const InputDecoration(labelText: 'اسم المستفيد / الجهة')),
+                TextField(controller: quotaController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'الحصة الشهرية (لتر)')),
+                DropdownButtonFormField<String>(
+                  value: fuelType,
+                  items: const [
+                    DropdownMenuItem(value: 'ديزل', child: Text('ديزل')),
+                    DropdownMenuItem(value: 'بنزين', child: Text('بنزين')),
+                  ],
+                  onChanged: (v) => setState(() => fuelType = v ?? 'ديزل'),
+                  decoration: const InputDecoration(labelText: 'نوع الوقود'),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
+              ElevatedButton(
+                onPressed: () async {
+                  if (nameController.text.isEmpty) return;
+                  await db.into(db.fuelRecipients).insert(FuelRecipientsCompanion.insert(
+                    name: nameController.text.trim(),
+                    monthlyQuota: Value(double.tryParse(quotaController.text) ?? 0.0),
+                    fuelType: Value(fuelType),
+                  ));
+                  if (context.mounted) Navigator.pop(context);
+                },
+                child: const Text('حفظ'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class FuelDispensingScreen extends ConsumerWidget {
+  const FuelDispensingScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final db = ref.watch(databaseProvider);
+
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(title: const Text('عمليات صرف الوقود'), backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
+        body: StreamBuilder<List<FuelDispense>>(
+          stream: db.select(db.fuelDispenses).watch(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+            final dispenses = snapshot.data!;
+            if (dispenses.isEmpty) return const Center(child: Text('لا توجد عمليات صرف مسجلة.'));
+            
+            return ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: dispenses.length,
+              itemBuilder: (context, index) {
+                final d = dispenses[index];
+                return Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.ev_station, color: Colors.deepOrange),
+                    title: Text('كمية: ${d.quantity} لتر'),
+                    subtitle: Text('التاريخ: ${DateFormat('yyyy-MM-dd').format(d.date)} | النوع: ${d.dispenseType == 1 ? 'حصة شهرية' : 'توجيه قائد'}'),
+                  ),
+                );
+              },
+            );
+          },
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () => _showDispenseFuelDialog(context, db),
+          label: const Text('صرف جديد', style: TextStyle(color: Colors.white)),
+          icon: const Icon(Icons.add, color: Colors.white),
+          backgroundColor: Colors.deepOrange,
+        ),
+      ),
+    );
+  }
+
+  void _showDispenseFuelDialog(BuildContext context, AppDatabase db) async {
+    final recipients = await db.select(db.fuelRecipients).get();
+    if (recipients.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('يرجى إضافة مستفيدين أولاً')));
+      return;
+    }
+
+    int? selectedRecipientId = recipients.first.id;
+    final qtyController = TextEditingController(text: '20');
+    int dispenseType = 1;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: AlertDialog(
+            title: const Text('تسجيل عملية صرف وقود'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<int>(
+                  value: selectedRecipientId,
+                  items: recipients.map((r) => DropdownMenuItem(value: r.id, child: Text(r.name))).toList(),
+                  onChanged: (v) => setState(() => selectedRecipientId = v),
+                  decoration: const InputDecoration(labelText: 'المستفيد'),
+                ),
+                TextField(controller: qtyController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'الكمية (لتر)')),
+                DropdownButtonFormField<int>(
+                  value: dispenseType,
+                  items: const [
+                    DropdownMenuItem(value: 1, child: Text('حصة شهرية')),
+                    DropdownMenuItem(value: 2, child: Text('توجيه قائد')),
+                  ],
+                  onChanged: (v) => setState(() => dispenseType = v ?? 1),
+                  decoration: const InputDecoration(labelText: 'نوع الصرف'),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
+              ElevatedButton(
+                onPressed: () async {
+                  if (selectedRecipientId == null) return;
+                  await db.into(db.fuelDispenses).insert(FuelDispensesCompanion.insert(
+                    recipientId: selectedRecipientId!,
+                    quantity: Value(double.tryParse(qtyController.text) ?? 0.0),
+                    dispenseType: Value(dispenseType),
+                  ));
+                  if (context.mounted) Navigator.pop(context);
+                },
+                child: const Text('تأكيد الصرف'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// --- 7. توجيهات القادة ---
+class CommanderDirectivesScreen extends ConsumerWidget {
+  const CommanderDirectivesScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final db = ref.watch(databaseProvider);
+
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(title: const Text('توجيهات القادة (صرف استثنائي)'), backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
+        body: StreamBuilder<List<CommanderDirective>>(
+          stream: db.select(db.commanderDirectives).watch(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+            final directives = snapshot.data!;
+            if (directives.isEmpty) return const Center(child: Text('لا توجد توجيهات مسجلة.'));
+            
+            return ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: directives.length,
+              itemBuilder: (context, index) {
+                final c = directives[index];
+                return Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.assignment, color: Colors.brown),
+                    title: Text('توجيه رقم: ${c.directiveNumber ?? 'بدون'}'),
+                    subtitle: Text('المستفيد: ${c.beneficiaryName} | الكمية: ${c.quantity} لتر'),
+                    trailing: Text(DateFormat('yyyy-MM-dd').format(c.date)),
+                  ),
+                );
+              },
+            );
+          },
+        ),
+        floatingActionButton: FloatingActionButton(
+          backgroundColor: const Color(0xFF1A5F7A),
+          child: const Icon(Icons.add, color: Colors.white),
+          onPressed: () => _showAddDirectiveDialog(context, db),
+        ),
+      ),
+    );
+  }
+
+  void _showAddDirectiveDialog(BuildContext context, AppDatabase db) {
+    final directiveNoController = TextEditingController();
+    final beneficiaryController = TextEditingController();
+    final qtyController = TextEditingController(text: '50');
+    final reasonController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: const Text('إضافة توجيه صرف جديد'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(controller: directiveNoController, decoration: const InputDecoration(labelText: 'رقم التوجيه')),
+                TextField(controller: beneficiaryController, decoration: const InputDecoration(labelText: 'اسم المستفيد')),
+                TextField(controller: qtyController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'الكمية الموجه بها (لتر)')),
+                TextField(controller: reasonController, decoration: const InputDecoration(labelText: 'الغرض من الصرف')),
+              ],
+            ),
+          ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('إغلاق')),
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
+            ElevatedButton(
+              onPressed: () async {
+                if (beneficiaryController.text.isEmpty) return;
+                await db.into(db.commanderDirectives).insert(CommanderDirectivesCompanion.insert(
+                  directiveNumber: Value(directiveNoController.text.trim()),
+                  beneficiaryName: beneficiaryController.text.trim(),
+                  quantity: Value(double.tryParse(qtyController.text) ?? 0.0),
+                  reason: Value(reasonController.text.trim()),
+                ));
+                if (context.mounted) Navigator.pop(context);
+              },
+              child: const Text('حفظ'),
+            ),
           ],
         ),
       ),
@@ -1476,7 +1771,7 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
   }
 }
 
-// 5. الحركات التاريخية العامة
+// --- 8. الحركات التاريخية العامة ---
 class AssetMovementsScreen extends ConsumerWidget {
   const AssetMovementsScreen({super.key});
 
@@ -1505,7 +1800,7 @@ class AssetMovementsScreen extends ConsumerWidget {
                   child: ListTile(
                     leading: const Icon(Icons.swap_horiz, color: Colors.indigo),
                     title: Text('نوع الحركة: ${mov.movementType} (الكمية: ${mov.quantityMoved})'),
-                    subtitle: Text('الملاحظات: ${mov.notes ?? 'لا توجد'}\nالوقت: ${mov.timestamp}'),
+                    subtitle: Text('الملاحظات: ${mov.notes ?? 'لا توجد'}\nالوقت: ${DateFormat('yyyy-MM-dd HH:mm').format(mov.timestamp)}'),
                   ),
                 );
               },
@@ -1517,7 +1812,7 @@ class AssetMovementsScreen extends ConsumerWidget {
   }
 }
 
-// 6. التقارير الشاملة
+// --- 9. التقارير الشاملة ---
 class EnterpriseReportsScreen extends ConsumerWidget {
   const EnterpriseReportsScreen({super.key});
 
@@ -1528,7 +1823,7 @@ class EnterpriseReportsScreen extends ConsumerWidget {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        appBar: AppBar(title: const Text('تقرير حركة الصنف والتقارير الشاملة'), backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
+        appBar: AppBar(title: const Text('التقارير والإحصائيات الشاملة'), backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
         body: StreamBuilder<List<Asset>>(
           stream: db.select(db.assets).watch(),
           builder: (context, snapshot) {
@@ -1541,6 +1836,8 @@ class EnterpriseReportsScreen extends ConsumerWidget {
             return ListView(
               padding: const EdgeInsets.all(16),
               children: [
+                const Text('إحصائيات العهد والأصول', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const SizedBox(height: 8),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
@@ -1550,7 +1847,24 @@ class EnterpriseReportsScreen extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 24),
-                const Text('تقرير تفصيلي بحالة الأرصدة وحركة الأصناف:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const Text('إحصائيات الوقود (الشهر الحالي)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const SizedBox(height: 8),
+                FutureBuilder<List<FuelDispense>>(
+                  future: db.select(db.fuelDispenses).get(),
+                  builder: (context, snapshot) {
+                    final dispenses = snapshot.data ?? [];
+                    double totalFuel = dispenses.fold(0.0, (sum, d) => sum + d.quantity);
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _reportCard('إجمالي المنصرف', '${totalFuel.toStringAsFixed(1)} لتر', Colors.redAccent),
+                        _reportCard('عمليات الصرف', '${dispenses.length}', Colors.deepOrange),
+                      ],
+                    );
+                  },
+                ),
+                const SizedBox(height: 24),
+                const Text('تقرير تفصيلي بحالة الأرصدة:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 const Divider(),
                 if (assets.isEmpty)
                   const Center(child: Padding(padding: EdgeInsets.all(24.0), child: Text('لا توجد أصناف مسجلة.')))
@@ -1578,9 +1892,9 @@ class EnterpriseReportsScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            Text(value, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: color)),
+            Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color)),
             const SizedBox(height: 4),
-            Text(title, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+            Text(title, style: const TextStyle(fontSize: 11, color: Colors.grey)),
           ],
         ),
       ),
@@ -1588,7 +1902,7 @@ class EnterpriseReportsScreen extends ConsumerWidget {
   }
 }
 
-// 7. الإعدادات والنسخ
+// --- 10. الإعدادات والنسخ ---
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
@@ -1616,6 +1930,11 @@ class SettingsScreen extends ConsumerWidget {
               onTap: () {
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إنشاء النسخة الاحتياطية بنجاح')));
               },
+            ),
+            ListTile(
+              leading: const Icon(Icons.info_outline, color: Colors.grey),
+              title: const Text('إصدار النظام'),
+              subtitle: const Text('v5.4 - نظام ناجي الأمير المتكامل'),
             ),
           ],
         ),
