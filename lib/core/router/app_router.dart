@@ -120,13 +120,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     if (user != null && user.passwordHash == password) {
       ref.read(currentUserProvider.notifier).state = user;
-      if (mounted) context.go('/home');
+      if (!mounted) return;
+      context.go('/home');
     } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('خطأ في اسم المستخدم أو كلمة المرور')),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('خطأ في اسم المستخدم أو كلمة المرور')),
+      );
     }
   }
 
@@ -630,8 +630,8 @@ class StoresManagementScreen extends ConsumerWidget {
                     movementType: 'إدخال وارد للمستودع',
                     notes: Value('إدخال أولي للمستودع: ${store.name}'),
                   ));
-
-                  if (context.mounted) Navigator.pop(context);
+                  if (!context.mounted) return;
+                  Navigator.pop(context);
                 },
                 child: const Text('إدخال'),
               ),
@@ -767,8 +767,8 @@ class StoreDetailsScreen extends ConsumerWidget {
                     movementType: 'إدخال وارد للمستودع',
                     notes: Value('إدخال أولي للمستودع: ${store.name}'),
                   ));
-
-                  if (context.mounted) Navigator.pop(context);
+                  if (!context.mounted) return;
+                  Navigator.pop(context);
                 },
                 child: const Text('إدخال'),
               ),
@@ -1324,11 +1324,13 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
                         notes: Value('تم صرف عدد $mQty قطعة للموظف: ${emp.rank} / ${emp.name}'),
                       ));
                     } else if (mQty > asset.remainingQuantity) {
+                      if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('الكمية المطلوبة أكبر من المتوفر')));
                       return;
                     }
                   }
-                  if (context.mounted) Navigator.pop(context);
+                  if (!context.mounted) return;
+                  Navigator.pop(context);
                 },
                 child: const Text('تأكيد'),
               ),
