@@ -142,7 +142,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   children: [
                     const Icon(Icons.shield_outlined, size: 80, color: Color(0xFF1A5F7A)),
                     const SizedBox(height: 16),
-                    const Text('نظام إمداد المؤسسي', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFF1A5F7A))),
+                    const Text('نظام ناجي الأمير المؤسسي', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFF1A5F7A))),
                     const SizedBox(height: 8),
                     const Text('إدارة التموين والعهد واللوجستيات', style: TextStyle(color: Colors.grey)),
                     const SizedBox(height: 32),
@@ -189,7 +189,7 @@ class ImdadEnterpriseDashboard extends ConsumerWidget {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: Text('لوحة التحكم - ${currentUser?.fullName ?? 'مدير النظام'}'),
+          title: Text('لوحة تحكم نظام ناجي الأمير (${currentUser?.fullName ?? 'مدير النظام'})'),
           backgroundColor: const Color(0xFF1A5F7A),
           foregroundColor: Colors.white,
           actions: [
@@ -214,7 +214,7 @@ class ImdadEnterpriseDashboard extends ConsumerWidget {
               _card(context, 'سجل الموظفين والعهد', Icons.badge, Colors.green, '/employees'),
               _card(context, 'العهد والتصنيفات والكميات', Icons.security, Colors.orange, '/assets'),
               _card(context, 'حركات الصرف والنقل', Icons.swap_horiz, Colors.indigo, '/movements'),
-              _card(context, 'التقارير الشاملة وجرد الكميات', Icons.analytics, Colors.purple, '/reports'),
+              _card(context, 'تقرير حركة الصنف والشامل', Icons.analytics, Colors.purple, '/reports'),
               _card(context, 'الإعدادات والنسخ', Icons.settings, Colors.blueGrey, '/settings'),
             ],
           ),
@@ -557,17 +557,26 @@ class StoresManagementScreen extends ConsumerWidget {
               onPressed: () async {
                 final qty = int.tryParse(qtyController.text.trim()) ?? 1;
                 if (serialController.text.isNotEmpty && nameController.text.isNotEmpty) {
-                  await db.into(db.assets).insert(AssetsCompanion.insert(
+                  final assetId = await db.into(db.assets).insert(AssetsCompanion.insert(
                     serialNumber: serialController.text.trim(),
                     name: nameController.text.trim(),
                     category: category,
                     totalQuantity: Value(qty),
-                    remainingQuantity: Value(qty), // افتراضياً الوارد = المتبقي عند الإدخال لأول مرة
+                    remainingQuantity: Value(qty),
                     assetStatus: Value(assetStatus),
                     storeId: Value(store.id),
                     specs: specsController.text.trim().isNotEmpty ? Value(specsController.text.trim()) : const Value.absent(),
                     status: const Value('in_store'),
                   ));
+                  
+                  // تسجيل حركة الدخول في جدول الحركات
+                  await db.into(db.assetMovements).insert(AssetMovementsCompanion.insert(
+                    assetId: assetId,
+                    quantityMoved: qty,
+                    movementType: 'إدخال وارد للمستودع',
+                    notes: 'إدخال أولي للمستودع: ${store.name}',
+                  ));
+
                   if (context.mounted) Navigator.pop(context);
                 }
               },
@@ -1008,6 +1017,13 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: [
                                 ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo, foregroundColor: Colors.white),
+                                  icon: const Icon(Icons.history),
+                                  label: const Text('تقرير الحركة'),
+                                  onPressed: () => _showAssetMovementHistory(context, db, asset),
+                                ),
+                                const SizedBox(width: 8),
+                                ElevatedButton.icon(
                                   style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
                                   icon: Icon(isAssigned ? Icons.keyboard_return : Icons.send),
                                   label: Text(isAssigned ? 'إرجاع للمستودع' : 'صرف لموظف'),
@@ -1168,7 +1184,7 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
               onPressed: () async {
                 final qty = int.tryParse(qtyController.text.trim()) ?? 1;
                 if (serialController.text.isNotEmpty && nameController.text.isNotEmpty && selectedStoreId != null) {
-                  await db.into(db.assets).insert(AssetsCompanion.insert(
+                  final assetId = await db.into(db.assets).insert(AssetsCompanion.insert(
                     serialNumber: serialController.text.trim(),
                     name: nameController.text.trim(),
                     category: category,
@@ -1180,6 +1196,15 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
                     specs: specsController.text.trim().isNotEmpty ? Value(specsController.text.trim()) : const Value.absent(),
                     status: const Value('in_store'),
                   ));
+
+                  // تسجيل حركة الدخول في جدول الحركات
+                  await db.into(db.assetMovements).insert(AssetMovementsCompanion.insert(
+                    assetId: assetId,
+                    quantityMoved: qty,
+                    movementType: 'إدخال وارد جديد',
+                    notes: 'إدخال أولي بكمية: $qty إلى المستودع',
+                  ));
+
                   if (context.mounted) Navigator.pop(context);
                 }
               },
@@ -1253,6 +1278,14 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
                       status: newRem == asset.totalQuantity ? const Value('in_store') : const Value('assigned'),
                     ),
                   );
+
+                  // تسجيل حركة الإرجاع
+                  await db.into(db.assetMovements).insert(AssetMovementsCompanion.insert(
+                    assetId: asset.id,
+                    quantityMoved: mQty,
+                    movementType: 'إرجاع للمستودع',
+                    notes: 'تم إرجاع عدد $mQty قطعة إلى المستودع الرئيسي',
+                  ));
                 } else {
                   if (selectedEmpId != null && mQty <= asset.remainingQuantity) {
                     int newRem = asset.remainingQuantity - mQty;
@@ -1264,6 +1297,15 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
                         status: const Value('assigned'),
                       ),
                     );
+
+                    // تسجيل حركة الصرف لموظف
+                    final emp = await (db.select(db.employees)..where((t) => t.id.equals(selectedEmpId!))).getSingle();
+                    await db.into(db.assetMovements).insert(AssetMovementsCompanion.insert(
+                      assetId: asset.id,
+                      quantityMoved: mQty,
+                      movementType: 'صرف عهدة لموظف',
+                      notes: 'تم صرف عدد $mQty قطعة للموظف: ${emp.rank} / ${emp.name}',
+                    ));
                   }
                 }
                 if (context.mounted) Navigator.pop(context);
@@ -1275,9 +1317,51 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
       ),
     );
   }
+
+  void _showAssetMovementHistory(BuildContext context, AppDatabase db, Asset asset) {
+    showDialog(
+      context: context,
+      builder: (context) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: Text('تقرير حركة الصنف: ${asset.name}'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: FutureBuilder<List<AssetMovement>>(
+              future: (db.select(db.assetMovements)..where((t) => t.assetId.equals(asset.id))).get(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+                final movements = snapshot.data!;
+                if (movements.isEmpty) {
+                  return const Text('لا توجد حركات مسجلة لهذا الصنف.');
+                }
+                return ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: movements.length,
+                  itemBuilder: (context, index) {
+                    final m = movements[index];
+                    return Card(
+                      child: ListTile(
+                        leading: const Icon(Icons.history, color: Colors.indigo),
+                        title: Text(m.movementType, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Text('الكمية: ${m.quantityMoved} | التفاصيل: ${m.notes ?? 'لا توجد ملاحظات'}\nالتاريخ: ${m.timestamp}'),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('إغلاق')),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-// 5. الحركات التاريخية
+// 5. الحركات التاريخية العامة
 class AssetMovementsScreen extends ConsumerWidget {
   const AssetMovementsScreen({super.key});
 
@@ -1294,6 +1378,9 @@ class AssetMovementsScreen extends ConsumerWidget {
           builder: (context, snapshot) {
             if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
             final movements = snapshot.data!;
+            if (movements.isEmpty) {
+              return const Center(child: Text('لا توجد حركات مسجلة حتى الآن.'));
+            }
             return ListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: movements.length,
@@ -1302,8 +1389,8 @@ class AssetMovementsScreen extends ConsumerWidget {
                 return Card(
                   child: ListTile(
                     leading: const Icon(Icons.swap_horiz, color: Colors.indigo),
-                    title: Text('الحركة: ${mov.movementType}'),
-                    subtitle: Text('التاريخ: ${mov.timestamp}'),
+                    title: Text('نوع الحركة: ${mov.movementType} (الكمية: ${mov.quantityMoved})'),
+                    subtitle: Text('الملاحظات: ${mov.notes ?? 'لا توجد'}\nالوقت: ${mov.timestamp}'),
                   ),
                 );
               },
@@ -1315,7 +1402,7 @@ class AssetMovementsScreen extends ConsumerWidget {
   }
 }
 
-// 6. التقارير الشاملة (مع جدول ملخص الكميات)
+// 6. التقارير الشاملة
 class EnterpriseReportsScreen extends ConsumerWidget {
   const EnterpriseReportsScreen({super.key});
 
@@ -1326,7 +1413,7 @@ class EnterpriseReportsScreen extends ConsumerWidget {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        appBar: AppBar(title: const Text('التقارير الشاملة وجرد الكميات'), backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
+        appBar: AppBar(title: const Text('تقرير حركة الصنف والتقارير الشاملة'), backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
         body: StreamBuilder<List<Asset>>(
           stream: db.select(db.assets).watch(),
           builder: (context, snapshot) {
@@ -1348,7 +1435,7 @@ class EnterpriseReportsScreen extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 24),
-                const Text('تقرير تفصيلي بحالة الأرصدة والكميات:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const Text('تقرير تفصيلي بحالة الأرصدة وحركة الأصناف:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 const Divider(),
                 if (assets.isEmpty)
                   const Center(child: Padding(padding: EdgeInsets.all(24.0), child: Text('لا توجد أصناف مسجلة.')))
@@ -1356,7 +1443,7 @@ class EnterpriseReportsScreen extends ConsumerWidget {
                   ...assets.map((a) => Card(
                         child: ListTile(
                           title: Text(a.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                          subtitle: Text('التصنيف: ${getCategoryName(a.category)} | الوارد: ${a.totalQuantity} | المتبقي: ${a.remainingQuantity}'),
+                          subtitle: Text('رقم القطعة: ${a.serialNumber} | الوارد: ${a.totalQuantity} | المتبقي: ${a.remainingQuantity}'),
                           trailing: getAssetStatusBadge(a.assetStatus),
                         ),
                       )),
