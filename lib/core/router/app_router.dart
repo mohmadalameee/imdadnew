@@ -1070,7 +1070,17 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
               child: ListTile(
                 title: Text(asset.name),
                 subtitle: Text('رقم: ${asset.serialNumber} | الكمية: ${asset.remainingQuantity}/${asset.totalQuantity}'),
-                trailing: getAssetStatusBadge(asset.assetStatus),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    getAssetStatusBadge(asset.assetStatus),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: const Icon(Icons.swap_horiz, color: Colors.indigo),
+                      onPressed: () => showMovementDialog(context, db, asset),
+                    ),
+                  ],
+                ),
                 onTap: () => _showAssetMovementHistory(context, db, asset),
               ),
             );
@@ -1222,7 +1232,7 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
     );
   }
 
-  void _showMovementDialog(BuildContext context, AppDatabase db, Asset asset) async {
+  void showMovementDialog(BuildContext context, AppDatabase db, Asset asset) async {
     final employees = await db.select(db.employees).get();
     final locations = await db.select(db.locations).get();
 
@@ -1564,7 +1574,8 @@ class FuelRecipientsScreen extends ConsumerWidget {
                     monthlyQuota: Value(double.tryParse(quotaController.text) ?? 0.0),
                     fuelType: Value(fuelType),
                   ));
-                  if (context.mounted) Navigator.pop(context);
+                  if (!context.mounted) return;
+                  Navigator.pop(context);
                 },
                 child: const Text('حفظ'),
               ),
@@ -1669,7 +1680,8 @@ class FuelDispensingScreen extends ConsumerWidget {
                     quantity: Value(double.tryParse(qtyController.text) ?? 0.0),
                     dispenseType: Value(dispenseType),
                   ));
-                  if (context.mounted) Navigator.pop(context);
+                  if (!context.mounted) return;
+                  Navigator.pop(context);
                 },
                 child: const Text('تأكيد الصرف'),
               ),
@@ -1754,13 +1766,14 @@ class CommanderDirectivesScreen extends ConsumerWidget {
             ElevatedButton(
               onPressed: () async {
                 if (beneficiaryController.text.isEmpty) return;
-                await db.into(db.commanderDirectives).insert(CommanderDirectivesCompanion.insert(
+                  await db.into(db.commanderDirectives).insert(CommanderDirectivesCompanion.insert(
                   directiveNumber: Value(directiveNoController.text.trim()),
                   beneficiaryName: beneficiaryController.text.trim(),
                   quantity: Value(double.tryParse(qtyController.text) ?? 0.0),
                   reason: Value(reasonController.text.trim()),
                 ));
-                if (context.mounted) Navigator.pop(context);
+                if (!context.mounted) return;
+                Navigator.pop(context);
               },
               child: const Text('حفظ'),
             ),
