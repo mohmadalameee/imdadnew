@@ -369,12 +369,13 @@ class LocationsManagementScreen extends ConsumerWidget {
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('يرجى ملء جميع الحقول المطلوبة')));
                   return;
                 }
-                await db.into(db.locations).insert(LocationsCompanion.insert(
+                  await db.into(db.locations).insert(LocationsCompanion.insert(
                   name: nameController.text.trim(),
                   supervisor: supervisorController.text.trim(),
                   description: Value(descController.text.trim()),
                 ));
-                if (context.mounted) Navigator.pop(context);
+                if (!context.mounted) return;
+                Navigator.pop(context);
               },
               child: const Text('حفظ'),
             ),
@@ -540,7 +541,8 @@ class StoresManagementScreen extends ConsumerWidget {
                     name: nameController.text.trim(),
                     location: locationController.text.trim(),
                   ));
-                  if (context.mounted) Navigator.pop(context);
+                  if (!context.mounted) return;
+                  Navigator.pop(context);
                 }
               },
               child: const Text('حفظ'),
@@ -904,7 +906,8 @@ class EmployeesManagementScreen extends ConsumerWidget {
                     department: deptController.text.trim(),
                     locationId: selectedLocationId != null ? Value(selectedLocationId) : const Value.absent(),
                   ));
-                  if (context.mounted) Navigator.pop(context);
+                  if (!context.mounted) return;
+                  Navigator.pop(context);
                 },
                 child: const Text('حفظ'),
               ),
@@ -1220,8 +1223,8 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
                     movementType: 'إدخال وارد جديد',
                     notes: Value('إدخال أولي بكمية: $qty إلى المستودع'),
                   ));
-
-                  if (context.mounted) Navigator.pop(context);
+                  if (!context.mounted) return;
+                  Navigator.pop(context);
                 },
                 child: const Text('حفظ'),
               ),
@@ -1474,7 +1477,8 @@ class VehiclesManagementScreen extends ConsumerWidget {
                     engineNumber: engineController.text.trim(),
                     fuelType: fuelType,
                   ));
-                  if (context.mounted) Navigator.pop(context);
+                  if (!context.mounted) return;
+                  Navigator.pop(context);
                 },
                 child: const Text('حفظ'),
               ),
