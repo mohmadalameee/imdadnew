@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.imdad"
+    namespace = "com.naji.alamir.system"
     compileSdk = 35
 
     compileOptions {
@@ -20,7 +20,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.imdad"
+        applicationId = "com.naji.alamir.system"
         minSdk = 21
         targetSdk = 35
         versionCode = 1

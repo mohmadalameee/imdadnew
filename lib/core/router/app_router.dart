@@ -142,7 +142,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   children: [
                     const Icon(Icons.shield_outlined, size: 80, color: Color(0xFF1A5F7A)),
                     const SizedBox(height: 16),
-                    const Text('نظام ناجي الأمير المؤسسي', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFF1A5F7A))),
+                    const Text('نظام إمداد المؤسسي', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFF1A5F7A))),
                     const SizedBox(height: 8),
                     const Text('إدارة التموين والعهد واللوجستيات', style: TextStyle(color: Colors.grey)),
                     const SizedBox(height: 32),
@@ -189,7 +189,7 @@ class ImdadEnterpriseDashboard extends ConsumerWidget {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: Text('لوحة تحكم نظام ناجي الأمير (${currentUser?.fullName ?? 'مدير النظام'})'),
+          title: Text('لوحة التحكم - ${currentUser?.fullName ?? 'مدير النظام'}'),
           backgroundColor: const Color(0xFF1A5F7A),
           foregroundColor: Colors.white,
           actions: [
@@ -212,9 +212,9 @@ class ImdadEnterpriseDashboard extends ConsumerWidget {
               _card(context, 'المواقع والنقاط', Icons.location_on, Colors.teal, '/locations'),
               _card(context, 'المخازن والمستودعات', Icons.store, Colors.blue, '/stores'),
               _card(context, 'سجل الموظفين والعهد', Icons.badge, Colors.green, '/employees'),
-              _card(context, 'العهد والتصنيفات والبحث', Icons.security, Colors.orange, '/assets'),
+              _card(context, 'العهد والتصنيفات والكميات', Icons.security, Colors.orange, '/assets'),
               _card(context, 'حركات الصرف والنقل', Icons.swap_horiz, Colors.indigo, '/movements'),
-              _card(context, 'التقارير الشاملة', Icons.analytics, Colors.purple, '/reports'),
+              _card(context, 'التقارير الشاملة وجرد الكميات', Icons.analytics, Colors.purple, '/reports'),
               _card(context, 'الإعدادات والنسخ', Icons.settings, Colors.blueGrey, '/settings'),
             ],
           ),
@@ -243,7 +243,7 @@ class ImdadEnterpriseDashboard extends ConsumerWidget {
   }
 }
 
-// 1. نظام المواقع والنقاط (Locations & Sites)
+// 1. نظام المواقع والنقاط
 class LocationsManagementScreen extends ConsumerWidget {
   const LocationsManagementScreen({super.key});
 
@@ -365,7 +365,7 @@ class LocationDetailsScreen extends ConsumerWidget {
             ),
             const Padding(
               padding: EdgeInsets.all(8.0),
-              child: Text('جرد حي للأصناف المتواجدة في هذا الموقع:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              child: Text('جرد حي للأصناف والكميات في هذا الموقع:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             ),
             Expanded(
               child: StreamBuilder<List<Asset>>(
@@ -385,7 +385,7 @@ class LocationDetailsScreen extends ConsumerWidget {
                         child: ListTile(
                           leading: const Icon(Icons.security, color: Color(0xFF1A5F7A)),
                           title: Text(asset.name),
-                          subtitle: Text('رقم القطعة: ${asset.serialNumber} | التصنيف: ${getCategoryName(asset.category)}'),
+                          subtitle: Text('الرقم: ${asset.serialNumber} | الوارد: ${asset.totalQuantity} | المتبقي: ${asset.remainingQuantity}'),
                           trailing: getAssetStatusBadge(asset.assetStatus),
                         ),
                       );
@@ -401,7 +401,7 @@ class LocationDetailsScreen extends ConsumerWidget {
   }
 }
 
-// 2. إدارة المخازن (مع زر إدخال أصناف بارز لكل مخزن)
+// 2. إدارة المخازن (مع زر إدخال أصناف بارز ودعم الكميات)
 class StoresManagementScreen extends ConsumerWidget {
   const StoresManagementScreen({super.key});
 
@@ -505,6 +505,7 @@ class StoresManagementScreen extends ConsumerWidget {
   void _showAddAssetToStoreDialog(BuildContext context, AppDatabase db, Store store) {
     final serialController = TextEditingController();
     final nameController = TextEditingController();
+    final qtyController = TextEditingController(text: '10');
     final specsController = TextEditingController();
     String category = 'weapons';
     String assetStatus = 'ready';
@@ -514,13 +515,14 @@ class StoresManagementScreen extends ConsumerWidget {
       builder: (context) => Directionality(
         textDirection: TextDirection.rtl,
         child: AlertDialog(
-          title: Text('إدخال صنف مباشر في مخزن: ${store.name}'),
+          title: Text('إدخال صنف وكميات في مخزن: ${store.name}'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextField(controller: serialController, decoration: const InputDecoration(labelText: 'رقم القطعة / الباركود')),
+                TextField(controller: serialController, decoration: const InputDecoration(labelText: 'رقم القطعة / كود الصنف')),
                 TextField(controller: nameController, decoration: const InputDecoration(labelText: 'اسم الصنف')),
+                TextField(controller: qtyController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'الكمية الواردة الإجمالية')),
                 DropdownButtonFormField<String>(
                   value: category,
                   items: const [
@@ -553,11 +555,14 @@ class StoresManagementScreen extends ConsumerWidget {
             TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
             ElevatedButton(
               onPressed: () async {
+                final qty = int.tryParse(qtyController.text.trim()) ?? 1;
                 if (serialController.text.isNotEmpty && nameController.text.isNotEmpty) {
                   await db.into(db.assets).insert(AssetsCompanion.insert(
                     serialNumber: serialController.text.trim(),
                     name: nameController.text.trim(),
                     category: category,
+                    totalQuantity: Value(qty),
+                    remainingQuantity: Value(qty), // افتراضياً الوارد = المتبقي عند الإدخال لأول مرة
                     assetStatus: Value(assetStatus),
                     storeId: Value(store.id),
                     specs: specsController.text.trim().isNotEmpty ? Value(specsController.text.trim()) : const Value.absent(),
@@ -604,7 +609,7 @@ class StoreDetailsScreen extends ConsumerWidget {
                   child: ListTile(
                     leading: const Icon(Icons.security, color: Color(0xFF1A5F7A)),
                     title: Text(asset.name),
-                    subtitle: Text('رقم القطعة: ${asset.serialNumber} | التصنيف: ${getCategoryName(asset.category)}'),
+                    subtitle: Text('رقم القطعة: ${asset.serialNumber} | الوارد: ${asset.totalQuantity} | المتبقي: ${asset.remainingQuantity}'),
                     trailing: getAssetStatusBadge(asset.assetStatus),
                   ),
                 );
@@ -670,7 +675,7 @@ class EmployeesManagementScreen extends ConsumerWidget {
                               return ListTile(
                                 leading: const Icon(Icons.security, size: 20, color: Colors.orange),
                                 title: Text(asset.name),
-                                subtitle: Text('رقم القطعة: ${asset.serialNumber} | التصنيف: ${getCategoryName(asset.category)}'),
+                                subtitle: Text('رقم القطعة: ${asset.serialNumber} | الكمية المصروفة: ${asset.totalQuantity - asset.remainingQuantity}'),
                                 trailing: getAssetStatusBadge(asset.assetStatus),
                               );
                             },
@@ -749,7 +754,7 @@ class EmployeesManagementScreen extends ConsumerWidget {
   }
 }
 
-// 4. العهد والتصنيفات والبحث المتقدم الشامل عن الموظف وجميع عهده
+// 4. العهد والبحث المتقدم الشامل (مع عرض الوارد والمتبقي)
 class AssetsInventoryScreen extends ConsumerStatefulWidget {
   const AssetsInventoryScreen({super.key});
 
@@ -760,7 +765,7 @@ class AssetsInventoryScreen extends ConsumerStatefulWidget {
 class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
   final _searchController = TextEditingController();
   String _searchQuery = '';
-  String _searchType = 'employee'; // الافتراضي: بحث عن موظف وعهد
+  String _searchType = 'employee';
 
   @override
   Widget build(BuildContext context) {
@@ -769,7 +774,7 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        appBar: AppBar(title: const Text('العهد والبحث المتقدم الشامل'), backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
+        appBar: AppBar(title: const Text('العهد وإدارة الكميات والبحث الشامل'), backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
         body: Column(
           children: [
             Padding(
@@ -808,9 +813,9 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
                     controller: _searchController,
                     decoration: InputDecoration(
                       labelText: _searchType == 'employee'
-                          ? 'أدخل اسم الموظف للبحث عنه وعرض كافة عهده'
+                          ? 'أدخل اسم الموظف لعرض كافة عهده وكمياتها'
                           : _searchType == 'serial'
-                              ? 'أدخل رقم القطعة / الباركود'
+                              ? 'أدخل رقم القطعة / كود الصنف'
                               : 'أدخل اسم الموقع أو النقطة',
                       prefixIcon: const Icon(Icons.search),
                       border: const OutlineInputBorder(),
@@ -900,14 +905,14 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      mainAxisAlignment: MainAxisAlignment.between,
                                       children: [
                                         Expanded(
                                           child: Column(
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
                                               Text(a.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                              Text('رقم القطعة: ${a.serialNumber} | التصنيف: ${getCategoryName(a.category)}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                                              Text('رقم القطعة: ${a.serialNumber} | الوارد: ${a.totalQuantity} | المتبقي: ${a.remainingQuantity}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
                                             ],
                                           ),
                                         ),
@@ -968,7 +973,7 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              mainAxisAlignment: MainAxisAlignment.between,
                               children: [
                                 Text('${asset.name} (${getCategoryName(asset.category)})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                                 getAssetStatusBadge(asset.assetStatus),
@@ -976,7 +981,7 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
                             ),
                             const Divider(),
                             Text('رقم القطعة: ${asset.serialNumber}'),
-                            Text('المواصفات: ${asset.specs ?? 'لا توجد'}'),
+                            Text('الكمية الواردة: ${asset.totalQuantity} | الكمية المتبقية: ${asset.remainingQuantity}'),
                             const SizedBox(height: 8),
                             if (isAssigned && employee != null) ...[
                               Container(
@@ -995,7 +1000,7 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
                               Container(
                                 padding: const EdgeInsets.all(8),
                                 color: Colors.green.withValues(alpha: 0.1),
-                                child: const Text('متوفرة في المستودع الرئيسي / مخزن التموين', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+                                child: Text('متوفرة في المخزن - المتبقي: ${asset.remainingQuantity}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
                               ),
                             ],
                             const SizedBox(height: 8),
@@ -1045,10 +1050,8 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
               future: (db.select(db.assets)..where((t) => t.locationId.equals(loc.id))).get(),
               builder: (context, assetSnapshot) {
                 final assets = assetSnapshot.data ?? [];
-                final readyCount = assets.where((a) => a.assetStatus == 'ready').length;
-                final damagedCount = assets.where((a) => a.assetStatus == 'damaged').length;
-                final maintCount = assets.where((a) => a.assetStatus == 'maintenance').length;
-                final missingCount = assets.where((a) => a.assetStatus == 'missing').length;
+                int totalInAll = assets.fold(0, (sum, a) => sum + a.totalQuantity);
+                int totalRemAll = assets.fold(0, (sum, a) => sum + a.remainingQuantity);
 
                 return Card(
                   elevation: 3,
@@ -1058,27 +1061,18 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('تقرير جرد الموقع: ${loc.name}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1A5F7A))),
+                        Text('تقرير جرد موقع: ${loc.name}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1A5F7A))),
                         const Divider(),
                         Text('المشرف المسؤول: ${loc.supervisor}'),
+                        Text('إجمالي الوارد: $totalInAll | إجمالي المتبقي: $totalRemAll', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.indigo)),
                         const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            _statChip('جاهز', readyCount, Colors.green),
-                            _statChip('تالف', damagedCount, Colors.red),
-                            _statChip('صيانة', maintCount, Colors.amber.shade800),
-                            _statChip('مفقود', missingCount, Colors.grey),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text('إجمالي الأصناف في الموقع (${assets.length}):', style: const TextStyle(fontWeight: FontWeight.bold)),
+                        Text('الأصناف في الموقع (${assets.length}):', style: const TextStyle(fontWeight: FontWeight.bold)),
                         if (assets.isEmpty)
                           const Text('لا توجد أصناف مسجلة في هذا الموقع.', style: TextStyle(color: Colors.grey))
                         else
                           ...assets.map((a) => Padding(
                                 padding: const EdgeInsets.symmetric(vertical: 2.0),
-                                child: Text('• ${a.name} (${getCategoryName(a.category)}) - حالة: ${a.assetStatus}'),
+                                child: Text('• ${a.name} | الوارد: ${a.totalQuantity} | المتبقي: ${a.remainingQuantity}'),
                               )),
                       ],
                     ),
@@ -1089,19 +1083,6 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
           },
         );
       },
-    );
-  }
-
-  Widget _statChip(String label, int count, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8), border: Border.all(color: color)),
-      child: Column(
-        children: [
-          Text('$count', style: TextStyle(fontWeight: FontWeight.bold, color: color, fontSize: 16)),
-          Text(label, style: TextStyle(color: color, fontSize: 12)),
-        ],
-      ),
     );
   }
 
@@ -1118,6 +1099,7 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
 
     final serialController = TextEditingController();
     final nameController = TextEditingController();
+    final qtyController = TextEditingController(text: '50');
     final specsController = TextEditingController();
     String category = 'weapons';
     String assetStatus = 'ready';
@@ -1131,13 +1113,14 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
       builder: (context) => Directionality(
         textDirection: TextDirection.rtl,
         child: AlertDialog(
-          title: const Text('إضافة عهدة / صنف تمويني جديد'),
+          title: const Text('إضافة عهدة / صنف كمي جديد'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextField(controller: serialController, decoration: const InputDecoration(labelText: 'رقم القطعة / الباركود')),
+                TextField(controller: serialController, decoration: const InputDecoration(labelText: 'رقم القطعة / كود الصنف')),
                 TextField(controller: nameController, decoration: const InputDecoration(labelText: 'اسم الصنف')),
+                TextField(controller: qtyController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'الكمية الواردة الإجمالية')),
                 DropdownButtonFormField<String>(
                   value: category,
                   items: const [
@@ -1183,11 +1166,14 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
             TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
             ElevatedButton(
               onPressed: () async {
+                final qty = int.tryParse(qtyController.text.trim()) ?? 1;
                 if (serialController.text.isNotEmpty && nameController.text.isNotEmpty && selectedStoreId != null) {
                   await db.into(db.assets).insert(AssetsCompanion.insert(
                     serialNumber: serialController.text.trim(),
                     name: nameController.text.trim(),
                     category: category,
+                    totalQuantity: Value(qty),
+                    remainingQuantity: Value(qty),
                     assetStatus: Value(assetStatus),
                     storeId: Value(selectedStoreId),
                     locationId: selectedLocationId != null ? Value(selectedLocationId) : const Value.absent(),
@@ -1218,6 +1204,7 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
 
     int? selectedEmpId = employees.isNotEmpty ? employees.first.id : null;
     int? selectedLocId = locations.isNotEmpty ? locations.first.id : null;
+    final moveQtyController = TextEditingController(text: '1');
     final isAssigned = asset.status == 'assigned';
 
     if (!context.mounted) return;
@@ -1227,7 +1214,7 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
       builder: (context) => Directionality(
         textDirection: TextDirection.rtl,
         child: AlertDialog(
-          title: Text(isAssigned ? 'إرجاع القطعة للمستودع' : 'صرف القطعة لموظف وموقع'),
+          title: Text(isAssigned ? 'إرجاع الكمية للمستودع' : 'صرف كمية لموظف'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -1238,6 +1225,7 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
                   onChanged: (v) => selectedEmpId = v,
                   decoration: const InputDecoration(labelText: 'الموظف المستلم'),
                 ),
+                TextField(controller: moveQtyController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'الكمية المراد صرفها')),
                 if (locations.isNotEmpty)
                   DropdownButtonFormField<int>(
                     value: selectedLocId,
@@ -1245,32 +1233,40 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
                     onChanged: (v) => selectedLocId = v,
                     decoration: const InputDecoration(labelText: 'الموقع التابع'),
                   ),
+              ] else ...[
+                TextField(controller: moveQtyController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'الكمية المراد إرجاعها')),
               ],
-              const Text('تأكيد الحركة التموينية؟'),
+              const Text('تأكيد حركة الصرف أو الإرجاع؟'),
             ],
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
             ElevatedButton(
               onPressed: () async {
+                final mQty = int.tryParse(moveQtyController.text.trim()) ?? 1;
                 if (isAssigned) {
+                  int newRem = asset.remainingQuantity + mQty;
+                  if (newRem > asset.totalQuantity) newRem = asset.totalQuantity;
                   await (db.update(db.assets)..where((t) => t.id.equals(asset.id))).write(
-                    const AssetsCompanion(status: Value('in_store'), employeeId: Value(null)),
+                    AssetsCompanion(
+                      remainingQuantity: Value(newRem),
+                      status: newRem == asset.totalQuantity ? const Value('in_store') : const Value('assigned'),
+                    ),
                   );
                 } else {
-                  if (selectedEmpId != null) {
+                  if (selectedEmpId != null && mQty <= asset.remainingQuantity) {
+                    int newRem = asset.remainingQuantity - mQty;
                     await (db.update(db.assets)..where((t) => t.id.equals(asset.id))).write(
                       AssetsCompanion(
-                        status: const Value('assigned'),
+                        remainingQuantity: Value(newRem),
                         employeeId: Value(selectedEmpId),
                         locationId: selectedLocId != null ? Value(selectedLocId) : const Value.absent(),
+                        status: const Value('assigned'),
                       ),
                     );
                   }
                 }
-                if (context.mounted) {
-                  Navigator.pop(context);
-                }
+                if (context.mounted) Navigator.pop(context);
               },
               child: const Text('تأكيد'),
             ),
@@ -1319,17 +1315,72 @@ class AssetMovementsScreen extends ConsumerWidget {
   }
 }
 
-// 6. التقارير الشاملة
-class EnterpriseReportsScreen extends StatelessWidget {
+// 6. التقارير الشاملة (مع جدول ملخص الكميات)
+class EnterpriseReportsScreen extends ConsumerWidget {
   const EnterpriseReportsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final db = ref.watch(databaseProvider);
+
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        appBar: AppBar(title: const Text('التقارير الشاملة'), backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
-        body: const Center(child: Text('وحدة تقارير التموين والعهد نشطة.')),
+        appBar: AppBar(title: const Text('التقارير الشاملة وجرد الكميات'), backgroundColor: const Color(0xFF1A5F7A), foregroundColor: Colors.white),
+        body: StreamBuilder<List<Asset>>(
+          stream: db.select(db.assets).watch(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+            final assets = snapshot.data!;
+            int totalIn = assets.fold(0, (sum, a) => sum + a.totalQuantity);
+            int totalRem = assets.fold(0, (sum, a) => sum + a.remainingQuantity);
+            int totalOut = totalIn - totalRem;
+
+            return ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _reportCard('إجمالي الوارد', '$totalIn', Colors.blue),
+                    _reportCard('إجمالي المنصرف', '$totalOut', Colors.orange),
+                    _reportCard('المتبقي بالمخازن', '$totalRem', Colors.green),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                const Text('تقرير تفصيلي بحالة الأرصدة والكميات:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const Divider(),
+                if (assets.isEmpty)
+                  const Center(child: Padding(padding: EdgeInsets.all(24.0), child: Text('لا توجد أصناف مسجلة.')))
+                else
+                  ...assets.map((a) => Card(
+                        child: ListTile(
+                          title: Text(a.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: Text('التصنيف: ${getCategoryName(a.category)} | الوارد: ${a.totalQuantity} | المتبقي: ${a.remainingQuantity}'),
+                          trailing: getAssetStatusBadge(a.assetStatus),
+                        ),
+                      )),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _reportCard(String title, String value, Color color) {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            Text(value, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: color)),
+            const SizedBox(height: 4),
+            Text(title, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          ],
+        ),
       ),
     );
   }
