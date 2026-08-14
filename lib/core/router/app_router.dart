@@ -572,9 +572,9 @@ class StoresManagementScreen extends ConsumerWidget {
                   // تسجيل حركة الدخول في جدول الحركات
                   await db.into(db.assetMovements).insert(AssetMovementsCompanion.insert(
                     assetId: assetId,
-                    quantityMoved: qty,
+                    quantityMoved: Value(qty),
                     movementType: 'إدخال وارد للمستودع',
-                    notes: 'إدخال أولي للمستودع: ${store.name}',
+                    notes: Value('إدخال أولي للمستودع: ${store.name}'),
                   ));
 
                   if (context.mounted) Navigator.pop(context);
@@ -1200,9 +1200,9 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
                   // تسجيل حركة الدخول في جدول الحركات
                   await db.into(db.assetMovements).insert(AssetMovementsCompanion.insert(
                     assetId: assetId,
-                    quantityMoved: qty,
+                    quantityMoved: Value(qty),
                     movementType: 'إدخال وارد جديد',
-                    notes: 'إدخال أولي بكمية: $qty إلى المستودع',
+                    notes: Value('إدخال أولي بكمية: $qty إلى المستودع'),
                   ));
 
                   if (context.mounted) Navigator.pop(context);
@@ -1282,9 +1282,9 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
                   // تسجيل حركة الإرجاع
                   await db.into(db.assetMovements).insert(AssetMovementsCompanion.insert(
                     assetId: asset.id,
-                    quantityMoved: mQty,
+                    quantityMoved: Value(mQty),
                     movementType: 'إرجاع للمستودع',
-                    notes: 'تم إرجاع عدد $mQty قطعة إلى المستودع الرئيسي',
+                    notes: Value('تم إرجاع عدد $mQty قطعة إلى المستودع الرئيسي'),
                   ));
                 } else {
                   if (selectedEmpId != null && mQty <= asset.remainingQuantity) {
@@ -1302,9 +1302,9 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
                     final emp = await (db.select(db.employees)..where((t) => t.id.equals(selectedEmpId!))).getSingle();
                     await db.into(db.assetMovements).insert(AssetMovementsCompanion.insert(
                       assetId: asset.id,
-                      quantityMoved: mQty,
+                      quantityMoved: Value(mQty),
                       movementType: 'صرف عهدة لموظف',
-                      notes: 'تم صرف عدد $mQty قطعة للموظف: ${emp.rank} / ${emp.name}',
+                      notes: Value('تم صرف عدد $mQty قطعة للموظف: ${emp.rank} / ${emp.name}'),
                     ));
                   }
                 }
