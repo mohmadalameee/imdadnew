@@ -318,14 +318,16 @@ class LocationsManagementScreen extends ConsumerWidget {
             TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
             ElevatedButton(
               onPressed: () async {
-                if (nameController.text.isNotEmpty && supervisorController.text.isNotEmpty) {
-                  await db.into(db.locations).insert(LocationsCompanion.insert(
-                    name: nameController.text.trim(),
-                    supervisor: supervisorController.text.trim(),
-                    description: Value(descController.text.trim()),
-                  ));
-                  if (context.mounted) Navigator.pop(context);
+                if (nameController.text.isEmpty || supervisorController.text.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('يرجى ملء جميع الحقول المطلوبة')));
+                  return;
                 }
+                await db.into(db.locations).insert(LocationsCompanion.insert(
+                  name: nameController.text.trim(),
+                  supervisor: supervisorController.text.trim(),
+                  description: Value(descController.text.trim()),
+                ));
+                if (context.mounted) Navigator.pop(context);
               },
               child: const Text('حفظ'),
             ),
@@ -512,51 +514,55 @@ class StoresManagementScreen extends ConsumerWidget {
 
     showDialog(
       context: context,
-      builder: (context) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: AlertDialog(
-          title: Text('إدخال صنف وكميات في مخزن: ${store.name}'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(controller: serialController, decoration: const InputDecoration(labelText: 'رقم القطعة / كود الصنف')),
-                TextField(controller: nameController, decoration: const InputDecoration(labelText: 'اسم الصنف')),
-                TextField(controller: qtyController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'الكمية الواردة الإجمالية')),
-                DropdownButtonFormField<String>(
-                  value: category,
-                  items: const [
-                    DropdownMenuItem(value: 'electronics', child: Text('أجهزة إلكترونية')),
-                    DropdownMenuItem(value: 'weapons', child: Text('أسلحة وذخيرة')),
-                    DropdownMenuItem(value: 'water_tanks', child: Text('خزانات مياه وشبكات صحية')),
-                    DropdownMenuItem(value: 'kitchen', child: Text('أدوات مطبخ وتجهيزات إعاشة')),
-                    DropdownMenuItem(value: 'furniture', child: Text('مفروشات وأثاث')),
-                    DropdownMenuItem(value: 'military_gear', child: Text('مهام عسكرية')),
-                  ],
-                  onChanged: (val) => category = val ?? 'weapons',
-                  decoration: const InputDecoration(labelText: 'التصنيف الشامل'),
-                ),
-                DropdownButtonFormField<String>(
-                  value: assetStatus,
-                  items: const [
-                    DropdownMenuItem(value: 'ready', child: Text('جاهز / يعمل')),
-                    DropdownMenuItem(value: 'damaged', child: Text('تالف')),
-                    DropdownMenuItem(value: 'maintenance', child: Text('تحتاج صيانة')),
-                    DropdownMenuItem(value: 'missing', child: Text('مفقود')),
-                  ],
-                  onChanged: (val) => assetStatus = val ?? 'ready',
-                  decoration: const InputDecoration(labelText: 'الحالة الفنية'),
-                ),
-                TextField(controller: specsController, decoration: const InputDecoration(labelText: 'المواصفات الفنية')),
-              ],
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: AlertDialog(
+            title: Text('إدخال صنف وكميات في مخزن: ${store.name}'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(controller: serialController, decoration: const InputDecoration(labelText: 'رقم القطعة / كود الصنف')),
+                  TextField(controller: nameController, decoration: const InputDecoration(labelText: 'اسم الصنف')),
+                  TextField(controller: qtyController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'الكمية الواردة الإجمالية')),
+                  DropdownButtonFormField<String>(
+                    value: category,
+                    items: const [
+                      DropdownMenuItem(value: 'electronics', child: Text('أجهزة إلكترونية')),
+                      DropdownMenuItem(value: 'weapons', child: Text('أسلحة وذخيرة')),
+                      DropdownMenuItem(value: 'water_tanks', child: Text('خزانات مياه وشبكات صحية')),
+                      DropdownMenuItem(value: 'kitchen', child: Text('أدوات مطبخ وتجهيزات إعاشة')),
+                      DropdownMenuItem(value: 'furniture', child: Text('مفروشات وأثاث')),
+                      DropdownMenuItem(value: 'military_gear', child: Text('مهام عسكرية')),
+                    ],
+                    onChanged: (val) => setState(() => category = val ?? 'weapons'),
+                    decoration: const InputDecoration(labelText: 'التصنيف الشامل'),
+                  ),
+                  DropdownButtonFormField<String>(
+                    value: assetStatus,
+                    items: const [
+                      DropdownMenuItem(value: 'ready', child: Text('جاهز / يعمل')),
+                      DropdownMenuItem(value: 'damaged', child: Text('تالف')),
+                      DropdownMenuItem(value: 'maintenance', child: Text('تحتاج صيانة')),
+                      DropdownMenuItem(value: 'missing', child: Text('مفقود')),
+                    ],
+                    onChanged: (val) => setState(() => assetStatus = val ?? 'ready'),
+                    decoration: const InputDecoration(labelText: 'الحالة الفنية'),
+                  ),
+                  TextField(controller: specsController, decoration: const InputDecoration(labelText: 'المواصفات الفنية')),
+                ],
+              ),
             ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
-            ElevatedButton(
-              onPressed: () async {
-                final qty = int.tryParse(qtyController.text.trim()) ?? 1;
-                if (serialController.text.isNotEmpty && nameController.text.isNotEmpty) {
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
+              ElevatedButton(
+                onPressed: () async {
+                  if (serialController.text.isEmpty || nameController.text.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('يرجى إدخال رقم القطعة واسم الصنف')));
+                    return;
+                  }
+                  final qty = int.tryParse(qtyController.text.trim()) ?? 1;
                   final assetId = await db.into(db.assets).insert(AssetsCompanion.insert(
                     serialNumber: serialController.text.trim(),
                     name: nameController.text.trim(),
@@ -569,7 +575,6 @@ class StoresManagementScreen extends ConsumerWidget {
                     status: const Value('in_store'),
                   ));
                   
-                  // تسجيل حركة الدخول في جدول الحركات
                   await db.into(db.assetMovements).insert(AssetMovementsCompanion.insert(
                     assetId: assetId,
                     quantityMoved: Value(qty),
@@ -578,11 +583,11 @@ class StoresManagementScreen extends ConsumerWidget {
                   ));
 
                   if (context.mounted) Navigator.pop(context);
-                }
-              },
-              child: const Text('إدخال'),
-            ),
-          ],
+                },
+                child: const Text('إدخال'),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -625,6 +630,101 @@ class StoreDetailsScreen extends ConsumerWidget {
               },
             );
           },
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () => _showAddAssetToStoreDialog(context, db, store),
+          label: const Text('إدخال صنف جديد', style: TextStyle(color: Colors.white)),
+          icon: const Icon(Icons.add_box, color: Colors.white),
+          backgroundColor: Colors.green,
+        ),
+      ),
+    );
+  }
+
+  void _showAddAssetToStoreDialog(BuildContext context, AppDatabase db, Store store) {
+    final serialController = TextEditingController();
+    final nameController = TextEditingController();
+    final qtyController = TextEditingController(text: '10');
+    final specsController = TextEditingController();
+    String category = 'weapons';
+    String assetStatus = 'ready';
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: AlertDialog(
+            title: Text('إدخال صنف وكميات في مخزن: ${store.name}'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(controller: serialController, decoration: const InputDecoration(labelText: 'رقم القطعة / كود الصنف')),
+                  TextField(controller: nameController, decoration: const InputDecoration(labelText: 'اسم الصنف')),
+                  TextField(controller: qtyController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'الكمية الواردة الإجمالية')),
+                  DropdownButtonFormField<String>(
+                    value: category,
+                    items: const [
+                      DropdownMenuItem(value: 'electronics', child: Text('أجهزة إلكترونية')),
+                      DropdownMenuItem(value: 'weapons', child: Text('أسلحة وذخيرة')),
+                      DropdownMenuItem(value: 'water_tanks', child: Text('خزانات مياه وشبكات صحية')),
+                      DropdownMenuItem(value: 'kitchen', child: Text('أدوات مطبخ وتجهيزات إعاشة')),
+                      DropdownMenuItem(value: 'furniture', child: Text('مفروشات وأثاث')),
+                      DropdownMenuItem(value: 'military_gear', child: Text('مهام عسكرية')),
+                    ],
+                    onChanged: (val) => setState(() => category = val ?? 'weapons'),
+                    decoration: const InputDecoration(labelText: 'التصنيف الشامل'),
+                  ),
+                  DropdownButtonFormField<String>(
+                    value: assetStatus,
+                    items: const [
+                      DropdownMenuItem(value: 'ready', child: Text('جاهز / يعمل')),
+                      DropdownMenuItem(value: 'damaged', child: Text('تالف')),
+                      DropdownMenuItem(value: 'maintenance', child: Text('تحتاج صيانة')),
+                      DropdownMenuItem(value: 'missing', child: Text('مفقود')),
+                    ],
+                    onChanged: (val) => setState(() => assetStatus = val ?? 'ready'),
+                    decoration: const InputDecoration(labelText: 'الحالة الفنية'),
+                  ),
+                  TextField(controller: specsController, decoration: const InputDecoration(labelText: 'المواصفات الفنية')),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
+              ElevatedButton(
+                onPressed: () async {
+                  if (serialController.text.isEmpty || nameController.text.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('يرجى إدخال رقم القطعة واسم الصنف')));
+                    return;
+                  }
+                  final qty = int.tryParse(qtyController.text.trim()) ?? 1;
+                  final assetId = await db.into(db.assets).insert(AssetsCompanion.insert(
+                    serialNumber: serialController.text.trim(),
+                    name: nameController.text.trim(),
+                    category: category,
+                    totalQuantity: Value(qty),
+                    remainingQuantity: Value(qty),
+                    assetStatus: Value(assetStatus),
+                    storeId: Value(store.id),
+                    specs: specsController.text.trim().isNotEmpty ? Value(specsController.text.trim()) : const Value.absent(),
+                    status: const Value('in_store'),
+                  ));
+                  
+                  await db.into(db.assetMovements).insert(AssetMovementsCompanion.insert(
+                    assetId: assetId,
+                    quantityMoved: Value(qty),
+                    movementType: 'إدخال وارد للمستودع',
+                    notes: Value('إدخال أولي للمستودع: ${store.name}'),
+                  ));
+
+                  if (context.mounted) Navigator.pop(context);
+                },
+                child: const Text('إدخال'),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -719,31 +819,37 @@ class EmployeesManagementScreen extends ConsumerWidget {
 
     showDialog(
       context: context,
-      builder: (context) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: AlertDialog(
-          title: const Text('إضافة موظف جديد'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(controller: nameController, decoration: const InputDecoration(labelText: 'اسم الموظف')),
-              TextField(controller: militaryIdController, decoration: const InputDecoration(labelText: 'الرقم العسكري')),
-              TextField(controller: rankController, decoration: const InputDecoration(labelText: 'الرتبة')),
-              TextField(controller: deptController, decoration: const InputDecoration(labelText: 'القسم')),
-              if (locations.isNotEmpty)
-                DropdownButtonFormField<int>(
-                  value: selectedLocationId,
-                  items: locations.map((l) => DropdownMenuItem(value: l.id, child: Text(l.name))).toList(),
-                  onChanged: (val) => selectedLocationId = val,
-                  decoration: const InputDecoration(labelText: 'الموقع التابع له'),
-                ),
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
-            ElevatedButton(
-              onPressed: () async {
-                if (nameController.text.isNotEmpty && militaryIdController.text.isNotEmpty) {
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: AlertDialog(
+            title: const Text('إضافة موظف جديد'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(controller: nameController, decoration: const InputDecoration(labelText: 'اسم الموظف')),
+                  TextField(controller: militaryIdController, decoration: const InputDecoration(labelText: 'الرقم العسكري')),
+                  TextField(controller: rankController, decoration: const InputDecoration(labelText: 'الرتبة')),
+                  TextField(controller: deptController, decoration: const InputDecoration(labelText: 'القسم')),
+                  if (locations.isNotEmpty)
+                    DropdownButtonFormField<int>(
+                      value: selectedLocationId,
+                      items: locations.map((l) => DropdownMenuItem(value: l.id, child: Text(l.name))).toList(),
+                      onChanged: (val) => setState(() => selectedLocationId = val),
+                      decoration: const InputDecoration(labelText: 'الموقع التابع له'),
+                    ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
+              ElevatedButton(
+                onPressed: () async {
+                  if (nameController.text.isEmpty || militaryIdController.text.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('يرجى إدخال الاسم والرقم العسكري')));
+                    return;
+                  }
                   await db.into(db.employees).insert(EmployeesCompanion.insert(
                     name: nameController.text.trim(),
                     militaryId: militaryIdController.text.trim(),
@@ -752,11 +858,11 @@ class EmployeesManagementScreen extends ConsumerWidget {
                     locationId: selectedLocationId != null ? Value(selectedLocationId) : const Value.absent(),
                   ));
                   if (context.mounted) Navigator.pop(context);
-                }
-              },
-              child: const Text('حفظ'),
-            ),
-          ],
+                },
+                child: const Text('حفظ'),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1126,64 +1232,68 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
 
     showDialog(
       context: context,
-      builder: (context) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: AlertDialog(
-          title: const Text('إضافة عهدة / صنف كمي جديد'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(controller: serialController, decoration: const InputDecoration(labelText: 'رقم القطعة / كود الصنف')),
-                TextField(controller: nameController, decoration: const InputDecoration(labelText: 'اسم الصنف')),
-                TextField(controller: qtyController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'الكمية الواردة الإجمالية')),
-                DropdownButtonFormField<String>(
-                  value: category,
-                  items: const [
-                    DropdownMenuItem(value: 'electronics', child: Text('أجهزة إلكترونية')),
-                    DropdownMenuItem(value: 'weapons', child: Text('أسلحة وذخيرة')),
-                    DropdownMenuItem(value: 'water_tanks', child: Text('خزانات مياه وشبكات صحية')),
-                    DropdownMenuItem(value: 'kitchen', child: Text('أدوات مطبخ وتجهيزات إعاشة')),
-                    DropdownMenuItem(value: 'furniture', child: Text('مفروشات وأثاث')),
-                    DropdownMenuItem(value: 'military_gear', child: Text('مهام عسكرية')),
-                  ],
-                  onChanged: (val) => category = val ?? 'weapons',
-                  decoration: const InputDecoration(labelText: 'التصنيف الشامل'),
-                ),
-                DropdownButtonFormField<String>(
-                  value: assetStatus,
-                  items: const [
-                    DropdownMenuItem(value: 'ready', child: Text('جاهز / يعمل')),
-                    DropdownMenuItem(value: 'damaged', child: Text('تالف')),
-                    DropdownMenuItem(value: 'maintenance', child: Text('تحتاج صيانة')),
-                    DropdownMenuItem(value: 'missing', child: Text('مفقود')),
-                  ],
-                  onChanged: (val) => assetStatus = val ?? 'ready',
-                  decoration: const InputDecoration(labelText: 'الحالة الفنية'),
-                ),
-                DropdownButtonFormField<int>(
-                  value: selectedStoreId,
-                  items: stores.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))).toList(),
-                  onChanged: (val) => selectedStoreId = val,
-                  decoration: const InputDecoration(labelText: 'المستودع الرئيسي'),
-                ),
-                if (locations.isNotEmpty)
-                  DropdownButtonFormField<int>(
-                    value: selectedLocationId,
-                    items: locations.map((l) => DropdownMenuItem(value: l.id, child: Text(l.name))).toList(),
-                    onChanged: (val) => selectedLocationId = val,
-                    decoration: const InputDecoration(labelText: 'الموقع التابع له'),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: AlertDialog(
+            title: const Text('إضافة عهدة / صنف كمي جديد'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(controller: serialController, decoration: const InputDecoration(labelText: 'رقم القطعة / كود الصنف')),
+                  TextField(controller: nameController, decoration: const InputDecoration(labelText: 'اسم الصنف')),
+                  TextField(controller: qtyController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'الكمية الواردة الإجمالية')),
+                  DropdownButtonFormField<String>(
+                    value: category,
+                    items: const [
+                      DropdownMenuItem(value: 'electronics', child: Text('أجهزة إلكترونية')),
+                      DropdownMenuItem(value: 'weapons', child: Text('أسلحة وذخيرة')),
+                      DropdownMenuItem(value: 'water_tanks', child: Text('خزانات مياه وشبكات صحية')),
+                      DropdownMenuItem(value: 'kitchen', child: Text('أدوات مطبخ وتجهيزات إعاشة')),
+                      DropdownMenuItem(value: 'furniture', child: Text('مفروشات وأثاث')),
+                      DropdownMenuItem(value: 'military_gear', child: Text('مهام عسكرية')),
+                    ],
+                    onChanged: (val) => setState(() => category = val ?? 'weapons'),
+                    decoration: const InputDecoration(labelText: 'التصنيف الشامل'),
                   ),
-                TextField(controller: specsController, decoration: const InputDecoration(labelText: 'المواصفات الفنية')),
-              ],
+                  DropdownButtonFormField<String>(
+                    value: assetStatus,
+                    items: const [
+                      DropdownMenuItem(value: 'ready', child: Text('جاهز / يعمل')),
+                      DropdownMenuItem(value: 'damaged', child: Text('تالف')),
+                      DropdownMenuItem(value: 'maintenance', child: Text('تحتاج صيانة')),
+                      DropdownMenuItem(value: 'missing', child: Text('مفقود')),
+                    ],
+                    onChanged: (val) => setState(() => assetStatus = val ?? 'ready'),
+                    decoration: const InputDecoration(labelText: 'الحالة الفنية'),
+                  ),
+                  DropdownButtonFormField<int>(
+                    value: selectedStoreId,
+                    items: stores.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))).toList(),
+                    onChanged: (val) => setState(() => selectedStoreId = val),
+                    decoration: const InputDecoration(labelText: 'المستودع الرئيسي'),
+                  ),
+                  if (locations.isNotEmpty)
+                    DropdownButtonFormField<int>(
+                      value: selectedLocationId,
+                      items: locations.map((l) => DropdownMenuItem(value: l.id, child: Text(l.name))).toList(),
+                      onChanged: (val) => setState(() => selectedLocationId = val),
+                      decoration: const InputDecoration(labelText: 'الموقع التابع له'),
+                    ),
+                  TextField(controller: specsController, decoration: const InputDecoration(labelText: 'المواصفات الفنية')),
+                ],
+              ),
             ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
-            ElevatedButton(
-              onPressed: () async {
-                final qty = int.tryParse(qtyController.text.trim()) ?? 1;
-                if (serialController.text.isNotEmpty && nameController.text.isNotEmpty && selectedStoreId != null) {
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
+              ElevatedButton(
+                onPressed: () async {
+                  if (serialController.text.isEmpty || nameController.text.isEmpty || selectedStoreId == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('يرجى إدخال كافة البيانات المطلوبة')));
+                    return;
+                  }
+                  final qty = int.tryParse(qtyController.text.trim()) ?? 1;
                   final assetId = await db.into(db.assets).insert(AssetsCompanion.insert(
                     serialNumber: serialController.text.trim(),
                     name: nameController.text.trim(),
@@ -1197,7 +1307,6 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
                     status: const Value('in_store'),
                   ));
 
-                  // تسجيل حركة الدخول في جدول الحركات
                   await db.into(db.assetMovements).insert(AssetMovementsCompanion.insert(
                     assetId: assetId,
                     quantityMoved: Value(qty),
@@ -1206,11 +1315,11 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
                   ));
 
                   if (context.mounted) Navigator.pop(context);
-                }
-              },
-              child: const Text('حفظ'),
-            ),
-          ],
+                },
+                child: const Text('حفظ'),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1236,83 +1345,89 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
 
     showDialog(
       context: context,
-      builder: (context) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: AlertDialog(
-          title: Text(isAssigned ? 'إرجاع الكمية للمستودع' : 'صرف كمية لموظف'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (!isAssigned) ...[
-                DropdownButtonFormField<int>(
-                  value: selectedEmpId,
-                  items: employees.map((e) => DropdownMenuItem(value: e.id, child: Text('${e.rank} / ${e.name}'))).toList(),
-                  onChanged: (v) => selectedEmpId = v,
-                  decoration: const InputDecoration(labelText: 'الموظف المستلم'),
-                ),
-                TextField(controller: moveQtyController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'الكمية المراد صرفها')),
-                if (locations.isNotEmpty)
-                  DropdownButtonFormField<int>(
-                    value: selectedLocId,
-                    items: locations.map((l) => DropdownMenuItem(value: l.id, child: Text(l.name))).toList(),
-                    onChanged: (v) => selectedLocId = v,
-                    decoration: const InputDecoration(labelText: 'الموقع التابع'),
-                  ),
-              ] else ...[
-                TextField(controller: moveQtyController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'الكمية المراد إرجاعها')),
-              ],
-              const Text('تأكيد حركة الصرف أو الإرجاع؟'),
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
-            ElevatedButton(
-              onPressed: () async {
-                final mQty = int.tryParse(moveQtyController.text.trim()) ?? 1;
-                if (isAssigned) {
-                  int newRem = asset.remainingQuantity + mQty;
-                  if (newRem > asset.totalQuantity) newRem = asset.totalQuantity;
-                  await (db.update(db.assets)..where((t) => t.id.equals(asset.id))).write(
-                    AssetsCompanion(
-                      remainingQuantity: Value(newRem),
-                      status: newRem == asset.totalQuantity ? const Value('in_store') : const Value('assigned'),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: AlertDialog(
+            title: Text(isAssigned ? 'إرجاع الكمية للمستودع' : 'صرف كمية لموظف'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (!isAssigned) ...[
+                    DropdownButtonFormField<int>(
+                      value: selectedEmpId,
+                      items: employees.map((e) => DropdownMenuItem(value: e.id, child: Text('${e.rank} / ${e.name}'))).toList(),
+                      onChanged: (v) => setState(() => selectedEmpId = v),
+                      decoration: const InputDecoration(labelText: 'الموظف المستلم'),
                     ),
-                  );
-
-                  // تسجيل حركة الإرجاع
-                  await db.into(db.assetMovements).insert(AssetMovementsCompanion.insert(
-                    assetId: asset.id,
-                    quantityMoved: Value(mQty),
-                    movementType: 'إرجاع للمستودع',
-                    notes: Value('تم إرجاع عدد $mQty قطعة إلى المستودع الرئيسي'),
-                  ));
-                } else {
-                  if (selectedEmpId != null && mQty <= asset.remainingQuantity) {
-                    int newRem = asset.remainingQuantity - mQty;
+                    TextField(controller: moveQtyController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'الكمية المراد صرفها')),
+                    if (locations.isNotEmpty)
+                      DropdownButtonFormField<int>(
+                        value: selectedLocId,
+                        items: locations.map((l) => DropdownMenuItem(value: l.id, child: Text(l.name))).toList(),
+                        onChanged: (v) => setState(() => selectedLocId = v),
+                        decoration: const InputDecoration(labelText: 'الموقع التابع'),
+                      ),
+                  ] else ...[
+                    TextField(controller: moveQtyController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'الكمية المراد إرجاعها')),
+                  ],
+                  const SizedBox(height: 12),
+                  const Text('تأكيد حركة الصرف أو الإرجاع؟', style: TextStyle(fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
+              ElevatedButton(
+                onPressed: () async {
+                  final mQty = int.tryParse(moveQtyController.text.trim()) ?? 1;
+                  if (isAssigned) {
+                    int newRem = asset.remainingQuantity + mQty;
+                    if (newRem > asset.totalQuantity) newRem = asset.totalQuantity;
                     await (db.update(db.assets)..where((t) => t.id.equals(asset.id))).write(
                       AssetsCompanion(
                         remainingQuantity: Value(newRem),
-                        employeeId: Value(selectedEmpId),
-                        locationId: selectedLocId != null ? Value(selectedLocId) : const Value.absent(),
-                        status: const Value('assigned'),
+                        status: newRem == asset.totalQuantity ? const Value('in_store') : const Value('assigned'),
                       ),
                     );
 
-                    // تسجيل حركة الصرف لموظف
-                    final emp = await (db.select(db.employees)..where((t) => t.id.equals(selectedEmpId!))).getSingle();
                     await db.into(db.assetMovements).insert(AssetMovementsCompanion.insert(
                       assetId: asset.id,
                       quantityMoved: Value(mQty),
-                      movementType: 'صرف عهدة لموظف',
-                      notes: Value('تم صرف عدد $mQty قطعة للموظف: ${emp.rank} / ${emp.name}'),
+                      movementType: 'إرجاع للمستودع',
+                      notes: Value('تم إرجاع عدد $mQty قطعة إلى المستودع الرئيسي'),
                     ));
+                  } else {
+                    if (selectedEmpId != null && mQty <= asset.remainingQuantity) {
+                      int newRem = asset.remainingQuantity - mQty;
+                      await (db.update(db.assets)..where((t) => t.id.equals(asset.id))).write(
+                        AssetsCompanion(
+                          remainingQuantity: Value(newRem),
+                          employeeId: Value(selectedEmpId),
+                          locationId: selectedLocId != null ? Value(selectedLocId) : const Value.absent(),
+                          status: const Value('assigned'),
+                        ),
+                      );
+
+                      final emp = await (db.select(db.employees)..where((t) => t.id.equals(selectedEmpId!))).getSingle();
+                      await db.into(db.assetMovements).insert(AssetMovementsCompanion.insert(
+                        assetId: asset.id,
+                        quantityMoved: Value(mQty),
+                        movementType: 'صرف عهدة لموظف',
+                        notes: Value('تم صرف عدد $mQty قطعة للموظف: ${emp.rank} / ${emp.name}'),
+                      ));
+                    } else if (mQty > asset.remainingQuantity) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('الكمية المطلوبة أكبر من المتوفر')));
+                      return;
+                    }
                   }
-                }
-                if (context.mounted) Navigator.pop(context);
-              },
-              child: const Text('تأكيد'),
-            ),
-          ],
+                  if (context.mounted) Navigator.pop(context);
+                },
+                child: const Text('تأكيد'),
+              ),
+            ],
+          ),
         ),
       ),
     );
