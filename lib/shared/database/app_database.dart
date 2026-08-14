@@ -89,7 +89,15 @@ class AppDatabase extends _$AppDatabase {
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) => m.createAll(),
     onUpgrade: (m, from, to) async {
-      await m.createAll();
+      if (from < 6) {
+        // إنشاء الجداول الجديدة فقط إذا لم تكن موجودة
+        try {
+          await m.createTable(assetMovements);
+          await m.createTable(auditLogs);
+        } catch (e) {
+          // إذا كانت الجداول موجودة بالفعل، لا نفعل شيئاً
+        }
+      }
     },
   );
 }
