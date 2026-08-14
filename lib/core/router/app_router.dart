@@ -905,7 +905,7 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.between,
+                                      mainAxisAlignment: MainAxisAlignment.spaceAround,
                                       children: [
                                         Expanded(
                                           child: Column(
@@ -973,7 +973,7 @@ class _AssetsInventoryScreenState extends ConsumerState<AssetsInventoryScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.between,
+                              mainAxisAlignment: MainAxisAlignment.spaceAround,
                               children: [
                                 Text('${asset.name} (${getCategoryName(asset.category)})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                                 getAssetStatusBadge(asset.assetStatus),
