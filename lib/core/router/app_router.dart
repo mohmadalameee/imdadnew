@@ -142,7 +142,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   children: [
                     const Icon(Icons.shield_outlined, size: 80, color: Color(0xFF1A5F7A)),
                     const SizedBox(height: 16),
-                    const Text('نظام إمداد المؤسسي', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFF1A5F7A))),
+                    const Text('نظام ناجي الأمير المؤسسي', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFF1A5F7A))),
                     const SizedBox(height: 8),
                     const Text('إدارة التموين والعهد واللوجستيات', style: TextStyle(color: Colors.grey)),
                     const SizedBox(height: 32),
@@ -189,7 +189,7 @@ class ImdadEnterpriseDashboard extends ConsumerWidget {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: Text('لوحة التحكم - ${currentUser?.fullName ?? 'مدير النظام'}'),
+          title: Text('لوحة تحكم نظام ناجي الأمير (${currentUser?.fullName ?? 'مدير النظام'})'),
           backgroundColor: const Color(0xFF1A5F7A),
           foregroundColor: Colors.white,
           actions: [

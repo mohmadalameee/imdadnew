@@ -7,7 +7,6 @@ import 'package:path_provider/path_provider.dart';
 
 part 'app_database.g.dart';
 
-// 1. جدول المستخدمين والصلاحيات (RBAC)
 class Users extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get username => text().unique()();
@@ -16,26 +15,23 @@ class Users extends Table {
   TextColumn get passwordHash => text()();
 }
 
-// 2. جدول المواقع والنقاط التابعة للمؤسسة (Locations & Sites)
 class Locations extends Table {
   IntColumn get id => integer().autoIncrement()();
-  TextColumn get name => text()(); // اسم الموقع / النقطة
-  TextColumn get supervisor => text()(); // المشرف على الموقع
+  TextColumn get name => text()();
+  TextColumn get supervisor => text()();
   TextColumn get description => text().nullable()();
 }
 
-// 3. جدول الموظفين
 class Employees extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get name => text()();
-  TextColumn get militaryId => text().unique()(); // الرقم العسكري / الوظيفي
-  TextColumn get rank => text()(); // الرتبة
-  TextColumn get department => text()(); // الإدارة / القسم
+  TextColumn get militaryId => text().unique()();
+  TextColumn get rank => text()();
+  TextColumn get department => text()();
   IntColumn get locationId => integer().references(Locations, #id).nullable()(); 
   TextColumn get status => text().withDefault(const Constant('active'))(); 
 }
 
-// 4. جدول المخازن
 class Stores extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get name => text()();
@@ -43,28 +39,18 @@ class Stores extends Table {
   TextColumn get location => text()();
 }
 
-// 5. جدول العهد والأصول والتموين (التصنيفات الستة والحالات الفنية الأربع)
+// جدول الأصناف والعهد مدعوم بالكميات (الوارده والمتبقية)
 class Assets extends Table {
   IntColumn get id => integer().autoIncrement()();
-  TextColumn get serialNumber => text().unique()(); // رقم القطعة / الباركود
+  TextColumn get serialNumber => text().unique()(); // رقم القطعة أو كود الصنف
   TextColumn get category => text()(); 
-  // التصنيفات الستة:
-  // electronics (أجهزة إلكترونية)
-  // weapons (أسلحة وذخيرة)
-  // water_tanks (خزانات مياه وشبكات صحية)
-  // kitchen (أدوات مطبخ وتجهيزات إعاشة)
-  // furniture (مفروشات وأثاث مكتبي وسكني)
-  // military_gear (مهام عسكرية)
-  
   TextColumn get name => text()(); // اسم الصنف
   
+  // حقول الكميات الجديدة لإدارة المخزون
+  IntColumn get totalQuantity => integer().withDefault(const Constant(1))(); // الكمية الواردة الإجمالية
+  IntColumn get remainingQuantity => integer().withDefault(const Constant(1))(); // الكمية المتبقية في المخزن
+  
   TextColumn get assetStatus => text().withDefault(const Constant('ready'))(); 
-  // الحالات الفنية الأربع:
-  // ready (جاهز / يعمل)
-  // damaged (تالف)
-  // maintenance (تحتاج صيانة)
-  // missing (مفقود)
-
   TextColumn get status => text().withDefault(const Constant('in_store'))(); // in_store, assigned
   IntColumn get storeId => integer().references(Stores, #id).nullable()();
   IntColumn get employeeId => integer().references(Employees, #id).nullable()();
@@ -73,18 +59,17 @@ class Assets extends Table {
   TextColumn get specs => text().nullable()(); 
 }
 
-// 6. جدول حركة العهد والأصول
 class AssetMovements extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get assetId => integer().references(Assets, #id)();
   IntColumn get fromEmployeeId => integer().references(Employees, #id).nullable()();
   IntColumn get toEmployeeId => integer().references(Employees, #id).nullable()();
+  IntColumn get quantityMoved => integer().withDefault(const Constant(1))();
   TextColumn get movementType => text()(); 
   DateTimeColumn get timestamp => dateTime().withDefault(currentDateAndTime)();
   TextColumn get notes => text().nullable()();
 }
 
-// 7. جدول سجل العمليات العام
 class AuditLogs extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get username => text()();
@@ -98,7 +83,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 5; // إصدار جديد تماماً لتجنب أي تخزين مؤقت
+  int get schemaVersion => 6; // إصدار جديد لضمان تطبيق هيكل الكميات
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -112,7 +97,7 @@ class AppDatabase extends _$AppDatabase {
 LazyDatabase _openConnection() {
   return LazyDatabase(() async {
     final directory = await getApplicationDocumentsDirectory();
-    final file = File(path.join(directory.path, 'imdad_enterprise_v5.db'));
+    final file = File(path.join(directory.path, 'imdad_enterprise_v6.db'));
     return NativeDatabase.createInBackground(file);
   });
 }
